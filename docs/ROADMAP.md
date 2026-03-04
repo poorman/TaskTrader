@@ -1,19 +1,24 @@
 # TaskTrader Pro — Roadmap
 
-## Phase 1: Core MVP (Current)
+## Phase 1: Core MVP (Complete)
 
-- [x] Architecture documentation
-- [ ] Project scaffolding (Vite + React + TypeScript + Tailwind)
-- [ ] Type definitions and Zustand stores
-- [ ] Layout shell (sidebar, header, page routing)
-- [ ] Dashboard page with hero cards, ticker tape, equity curve
-- [ ] Kanban board with drag-and-drop
-- [ ] Analytics page with charts
-- [ ] Clients page with CRUD
-- [ ] localStorage persistence
-- [ ] JSON export/import
-- [ ] Docker deployment (nginx, port 2030)
-- [ ] Seed data for demo
+- [x] Architecture documentation (6 doc files)
+- [x] Project scaffolding (Vite + React 18 + TypeScript 5.6 + TailwindCSS 3.4)
+- [x] Type definitions and Zustand stores (task, gamification, UI)
+- [x] Layout shell (glassmorphism sidebar, header, page routing with Framer Motion)
+- [x] Dashboard page (P&L hero, equity curve, metric cards, mini kanban, ticker tape, revenue breakdown)
+- [x] Task Board — full Kanban with HTML drag-and-drop across 5 columns
+- [x] P&L Analytics page (revenue over time, P&L by client, win/loss pie, revenue by type)
+- [x] Clients page with CRUD, search, per-client stats
+- [x] Categories page with add/delete
+- [x] Goals page with revenue targets and progress bars
+- [x] Settings page (trader profile, achievements, XP display)
+- [x] New Task page ("Open Position" form with live revenue preview)
+- [x] Gamification engine (variable rewards, streaks, 10 achievements, confetti, positive framing)
+- [x] localStorage persistence via Zustand persist middleware
+- [x] JSON export/import from Settings
+- [x] Docker deployment (nginx, port 2030)
+- [x] Seed data (15 tasks, 6 clients) auto-loads on first visit
 
 ## Phase 2: Enhanced Tracking
 

@@ -7,96 +7,105 @@ Central task management store. Handles CRUD operations, status transitions, and 
 
 **State:**
 - `tasks: Task[]` — all tasks
-- `filter: TaskFilter` — current filter criteria (status, client, priority, assignee, date range)
-- `sortBy: SortField` — current sort field
+- `clients: Client[]` — all clients
+- `categories: Category[]` — project type categories
+- `goals: Goal[]` — revenue targets
 
 **Actions:**
-- `addTask(task)` — create new task, auto-set `created_at`
-- `updateTask(id, partial)` — update task fields
+- `addTask(task)` — create new task, auto-set `createdAt`, calculate `revenue`
+- `updateTask(id, partial)` — update task fields, recalculate revenue
 - `deleteTask(id)` — remove task
-- `moveTask(id, status)` — change task status (Kanban column move)
-- `startTask(id)` — set status to "in_progress", record `started_at`
-- `completeTask(id, actual_hours)` — set status to "done", record `completed_at`, calculate P&L
-- `setFilter(filter)` — update filter criteria
-- `reorderTasks(status, ordered_ids)` — reorder within a Kanban column
+- `moveTask(id, status)` — change task status (Kanban column move), auto-set `startedAt`
+- `completeTask(id, actualHours)` — set status to "completed", calculate P&L
+- `loseTask(id)` — mark as lost, set negative P&L
+- `reorderTasks(status, orderedIds)` — reorder within a Kanban column
+- `toggleBookmark(id)` — bookmark/unbookmark a task
+- `addClient/updateClient/deleteClient` — client CRUD
+- `addCategory/deleteCategory` — category CRUD
+- `addGoal/deleteGoal` — goal CRUD
+- `seed(tasks, clients)` — bulk replace for import/demo
 
-**Computed:**
-- `activeTasks` — tasks with status "in_progress"
-- `todayCompleted` — tasks completed today
-- `totalPnL` — sum of all completed task P&L
-- `winRate` — % of completed tasks with positive P&L
-- `tasksByStatus` — grouped for Kanban columns
-
-### `clientStore.ts`
-Client management store.
+### `gamificationStore.ts`
+XP, leveling, streaks, achievements, and reward events.
 
 **State:**
-- `clients: Client[]` — all clients
+- `xp: number` — total experience points
+- `level: number` — current level
+- `streak: number` — consecutive active days
+- `achievements: Achievement[]` — unlocked achievements
+- `totalTasksCompleted: number`
+- `pendingRewards: RewardEvent[]` — queue of reward popups to display
 
 **Actions:**
-- `addClient(client)` — create client
-- `updateClient(id, partial)` — update client
-- `deleteClient(id)` — remove client (soft delete if has tasks)
-
-**Computed:**
-- `clientStats(id)` — total tasks, revenue, avg completion time, P&L for a client
-- `topClients` — ranked by revenue or P&L
+- `onTaskCompleted(task)` — roll variable reward, add XP, queue popup
+- `checkStreak()` — check/update daily streak on app load
+- `dismissReward(id)` — remove reward popup from queue
+- `checkAchievements(context)` — evaluate unlock conditions for all achievements
 
 ### `uiStore.ts`
 UI state management.
 
 **State:**
+- `activePage: Page` — current page
 - `sidebarCollapsed: boolean`
-- `activePage: Page`
-- `modalOpen: string | null`
-- `theme: ThemeConfig`
+- `searchQuery: string`
+
+**Actions:**
+- `setPage(page)` — navigate to page
+- `toggleSidebar()` — collapse/expand sidebar
+- `setSearch(query)` — update search filter
 
 ## Components
 
 ### Layout
 | Component | Purpose |
 |-----------|---------|
-| `Layout.tsx` | Main app shell with sidebar + header + content area |
-| `Sidebar.tsx` | Navigation: Dashboard, Kanban, Analytics, Clients. Collapsible. |
-| `Header.tsx` | Page title, search, quick-add task button, settings |
+| `Layout.tsx` | App shell with sidebar + header + content area + ambient gradient background |
+| `Sidebar.tsx` | 8-page navigation, XP bar with level, streak counter, collapsible |
+| `Header.tsx` | Page title, time range pills, search input, notification bell, avatar |
 
 ### Dashboard
 | Component | Purpose |
 |-----------|---------|
-| `HeroCards.tsx` | 3 main metric cards (Active Tasks, Today's Throughput, Weekly P&L) with scrollable secondary stats |
-| `TickerTape.tsx` | Horizontal scrolling bar showing recent completions like a stock ticker |
-| `EquityCurve.tsx` | Recharts area chart showing cumulative P&L over time |
-| `ActivityFeed.tsx` | Recent task status changes with timestamps |
+| `HeroCard.tsx` | Reusable metric card with animated number, glow, and sub-values |
+| `EquityCurve.tsx` | Recharts dual-area chart (revenue + P&L) with custom tooltip |
+| `MetricCards.tsx` | 4-card grid: Open Profit, Realized Profit, Lost Revenue, Win Rate |
+| `MiniKanban.tsx` | Compact 5-column kanban preview with task cards |
+| `RevenueBreakdown.tsx` | Revenue by project type with animated progress bars |
+| `TickerTape.tsx` | Auto-scrolling ticker of recent completions |
 
 ### Kanban
 | Component | Purpose |
 |-----------|---------|
-| `Board.tsx` | Kanban board container, manages columns and drag state |
-| `Column.tsx` | Single column (Backlog/In Progress/Review/Done) with WIP limit indicator |
-| `Card.tsx` | Task card with client, hours estimate, priority badge, assignee |
-| `AddTask.tsx` | Inline task creation form within a column |
+| `Board.tsx` | Full kanban container, routes drag events to store |
+| `Column.tsx` | Drop target with header, value total, card list |
+| `TaskCard.tsx` | Full task card with progress bar, priority badge, bookmark, hours |
 
-### Analytics
+### Gamification
 | Component | Purpose |
 |-----------|---------|
-| `RevenueChart.tsx` | Revenue vs Cost area/bar chart over time |
-| `ClientPnL.tsx` | Horizontal bar chart of P&L per client |
-| `WinRate.tsx` | Donut chart showing win/loss ratio |
-| `Heatmap.tsx` | Grid heatmap of task completions by day/hour |
-
-### Clients
-| Component | Purpose |
-|-----------|---------|
-| `ClientList.tsx` | Searchable/filterable client table |
-| `ClientDetail.tsx` | Full client view with task history and P&L timeline |
-| `ClientForm.tsx` | Add/edit client modal form |
+| `RewardPopup.tsx` | Bottom-center XP reward popup with confetti, variable multiplier display |
+| `AchievementToast.tsx` | Top-right achievement unlock toasts with rarity-colored borders |
 
 ### Shared
 | Component | Purpose |
 |-----------|---------|
-| `AnimatedNumber.tsx` | Smooth number transitions (reused pattern from MetaTrader) |
-| `Badge.tsx` | Priority/status badges with trading-style colors |
-| `Modal.tsx` | Reusable modal with Framer Motion enter/exit animations |
+| `AnimatedNumber.tsx` | Smooth number transitions with ease-out cubic easing |
+| `Badge.tsx` | `PriorityBadge` and `StatusBadge` with trading-style colors |
+| `GlassCard.tsx` | Reusable glassmorphism card with Framer Motion entry + hover |
+| `Modal.tsx` | Reusable modal with backdrop blur and spring animation |
+
+### Pages (standalone)
+| Page | Purpose |
+|------|---------|
+| `Dashboard.tsx` | Composes all dashboard components, calculates aggregate stats |
+| `TaskBoard.tsx` | Wraps `Board` component |
+| `Analytics.tsx` | 4 Recharts visualizations with quick-stat cards |
+| `NewTask.tsx` | "Open Position" form with live revenue preview |
+| `Clients.tsx` | Client grid with add/edit modal, per-client stats |
+| `Categories.tsx` | Category list with add/delete |
+| `Goals.tsx` | Revenue targets with animated progress bars |
+| `Settings.tsx` | Trader profile, achievements grid, data import/export |
 
 ## Types
 
@@ -106,20 +115,24 @@ interface Task {
   id: string;
   title: string;
   description?: string;
-  client_id: string;
-  project_type: "web_design" | "printing" | "branding" | "other";
-  status: "backlog" | "in_progress" | "review" | "done";
+  clientId: string;
+  projectType: "web_design" | "printing" | "branding" | "consulting" | "other";
+  status: "lead" | "in_progress" | "waiting" | "completed" | "lost";
   priority: "low" | "medium" | "high" | "urgent";
   assignee?: string;
-  estimated_hours: number;
-  actual_hours?: number;
-  hourly_rate: number;
-  pnl?: number;           // (estimated - actual) × hourly_rate
-  created_at: string;
-  started_at?: string;
-  completed_at?: string;
-  order: number;           // position within Kanban column
+  estimatedHours: number;
+  actualHours: number;
+  hourlyRate: number;
+  pnl: number;
+  revenue: number;
+  progress: number;         // 0-100
+  createdAt: string;
+  startedAt?: string;
+  completedAt?: string;
+  dueDate?: string;
+  order: number;
   tags?: string[];
+  bookmarked?: boolean;
 }
 ```
 
@@ -131,10 +144,23 @@ interface Client {
   company?: string;
   email?: string;
   phone?: string;
-  default_hourly_rate: number;
+  defaultHourlyRate: number;
   notes?: string;
-  created_at: string;
-  color: string;           // assigned color for charts
+  createdAt: string;
+  color: string;
+}
+```
+
+### `Achievement`
+```typescript
+interface Achievement {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  unlockedAt?: string;
+  xpReward: number;
+  rarity: "common" | "rare" | "epic" | "legendary";
 }
 ```
 
@@ -142,12 +168,21 @@ interface Client {
 
 ### `calculations.ts`
 - `calculatePnL(estimated, actual, rate)` — compute task P&L
+- `calculateRealizedPnL(tasks)` — sum P&L of completed tasks
+- `calculateOpenProfit(tasks)` — projected profit on active tasks
+- `calculateLostRevenue(tasks)` — total revenue of lost tasks
 - `calculateWinRate(tasks)` — % of profitable completions
-- `calculateROI(tasks)` — total P&L / total estimated revenue
-- `aggregateByPeriod(tasks, period)` — group tasks by day/week/month for charts
+- `revenueByType(tasks)` — aggregate revenue by project type
+- `buildDailySnapshots(tasks)` — cumulative daily data for equity curve
+- `formatCurrency(value)` / `formatCurrencyFull(value)` — display helpers
 
-### `storage.ts`
-- `loadState(key)` — read from localStorage with JSON parse
-- `saveState(key, data)` — write to localStorage with JSON stringify
-- `exportData()` — export all stores to a single JSON file (download)
-- `importData(json)` — import and hydrate all stores from JSON file
+### `gamification.ts`
+- `xpForLevel(level)` / `getLevelFromXP(xp)` — exponential leveling curve
+- `rollReward()` — variable reward with 1%/4%/10%/20% bonus tiers
+- `getPositiveFrame(task)` — "losses disguised as wins" messaging
+- `getStreakMessage(streak)` — milestone streak messages
+- `ACHIEVEMENTS` — 10 achievement definitions (common → legendary)
+
+### `seedData.ts`
+- `SEED_CLIENTS` — 6 demo clients with colors and rates
+- `SEED_TASKS` — 15 demo tasks across all statuses
