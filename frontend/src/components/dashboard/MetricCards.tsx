@@ -34,8 +34,8 @@ export default function MetricCards({ metrics }: { metrics: MetricData[] }) {
           </p>
           <AnimatedNumber
             value={Math.abs(m.value)}
-            prefix={m.value < 0 ? `-${m.prefix || "$"}` : (m.prefix || "$")}
-            suffix={m.suffix || ""}
+            prefix={m.value < 0 ? `-${m.prefix ?? "$"}` : (m.prefix ?? "$")}
+            suffix={m.suffix ?? ""}
             className="text-xl font-display font-bold"
             decimals={m.suffix === "%" ? 0 : 0}
           />

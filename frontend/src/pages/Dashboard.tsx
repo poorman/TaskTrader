@@ -156,7 +156,9 @@ export default function Dashboard() {
 
       {/* Bottom row: Mini Kanban + Revenue Breakdown */}
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_280px] gap-5">
-        <MiniKanban tasks={tasks} clients={clients} />
+        <div className="min-w-0 overflow-hidden">
+          <MiniKanban tasks={tasks} clients={clients} />
+        </div>
         <RevenueBreakdown tasks={tasks} />
       </div>
 

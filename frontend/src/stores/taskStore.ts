@@ -90,18 +90,41 @@ export const useTaskStore = create<TaskStore>()(
 
       moveTask: (id, status) =>
         set((s) => ({
-          tasks: s.tasks.map((t) =>
-            t.id === id
-              ? {
-                  ...t,
-                  status,
-                  startedAt:
-                    status === "in_progress" && !t.startedAt
-                      ? new Date().toISOString()
-                      : t.startedAt,
-                }
-              : t
-          ),
+          tasks: s.tasks.map((t) => {
+            if (t.id !== id) return t;
+            const now = new Date().toISOString();
+            // When moved to completed, auto-calculate P&L using actual hours (or estimated if none tracked)
+            if (status === "completed") {
+              const actual = t.actualHours > 0 ? t.actualHours : t.estimatedHours;
+              const pnl = (t.estimatedHours - actual) * t.hourlyRate;
+              return {
+                ...t,
+                status,
+                actualHours: actual,
+                pnl,
+                progress: 100,
+                completedAt: now,
+              };
+            }
+            // When moved to lost, set negative P&L
+            if (status === "lost") {
+              return {
+                ...t,
+                status,
+                pnl: -(t.actualHours > 0 ? t.actualHours * t.hourlyRate : t.revenue),
+                progress: 0,
+                completedAt: now,
+              };
+            }
+            return {
+              ...t,
+              status,
+              startedAt:
+                status === "in_progress" && !t.startedAt ? now : t.startedAt,
+              // Clear completedAt if moving back from completed/lost
+              completedAt: undefined,
+            };
+          }),
         })),
 
       completeTask: (id, actualHours) =>

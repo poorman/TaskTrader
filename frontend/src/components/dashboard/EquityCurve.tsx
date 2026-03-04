@@ -58,7 +58,12 @@ export default function EquityCurve({ data }: Props) {
       transition={{ duration: 0.5, delay: 0.2 }}
       className="glass rounded-2xl p-5"
     >
-      <div className="h-[240px]">
+      <div className="h-[240px] relative">
+        {data.length === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center text-gray-500 text-sm">
+            Complete tasks to see your equity curve
+          </div>
+        )}
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data}>
             <defs>
