@@ -43,7 +43,7 @@ export default function Board() {
         actualHours: task.actualHours,
         hourlyRate: task.hourlyRate,
       });
-      setInputHours(task.actualHours > 0 ? task.actualHours : task.estimatedHours);
+      setInputHours(task.actualHours > 0 ? task.actualHours : 0);
     } else {
       moveTask(taskId, newStatus);
     }
