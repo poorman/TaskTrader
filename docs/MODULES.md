@@ -8,8 +8,9 @@ Central task management store. Handles CRUD operations, status transitions, and 
 **State:**
 - `tasks: Task[]` — all tasks
 - `clients: Client[]` — all clients
-- `categories: Category[]` — project type categories
+- `categories: Category[]` — project type categories (name + color)
 - `goals: Goal[]` — revenue targets
+- `meetings: Meeting[]` — scheduled meetings
 
 **Actions:**
 - `addTask(task)` — create new task, auto-set `createdAt`, calculate `revenue`
@@ -20,9 +21,11 @@ Central task management store. Handles CRUD operations, status transitions, and 
 - `loseTask(id)` — mark as lost, set negative P&L
 - `reorderTasks(status, orderedIds)` — reorder within a Kanban column
 - `toggleBookmark(id)` — bookmark/unbookmark a task
+- `addSubtask/toggleSubtask/deleteSubtask` — subtask CRUD
 - `addClient/updateClient/deleteClient` — client CRUD
 - `addCategory/deleteCategory` — category CRUD
 - `addGoal/deleteGoal` — goal CRUD
+- `addMeeting/updateMeeting/deleteMeeting/toggleMeetingDone` — meeting CRUD
 - `seed(tasks, clients)` — bulk replace for import/demo
 
 ### `gamificationStore.ts`
@@ -34,11 +37,15 @@ XP, leveling, streaks, achievements, and reward events.
 - `streak: number` — consecutive active days
 - `achievements: Achievement[]` — unlocked achievements
 - `totalTasksCompleted: number`
+- `dailyCompleted: number` — tasks completed today
 - `pendingRewards: RewardEvent[]` — queue of reward popups to display
+- `multiplier: number` — current XP multiplier
+- `multiplierExpiresAt?: string` — multiplier expiry
 
 **Actions:**
 - `onTaskCompleted(task)` — roll variable reward, add XP, queue popup
 - `checkStreak()` — check/update daily streak on app load
+- `syncDailyCompleted(tasks)` — reconcile daily count from task data
 - `dismissReward(id)` — remove reward popup from queue
 - `checkAchievements(context)` — evaluate unlock conditions for all achievements
 
@@ -48,11 +55,13 @@ UI state management.
 **State:**
 - `activePage: Page` — current page
 - `sidebarCollapsed: boolean`
+- `theme: "dark" | "light"` — current theme
 - `searchQuery: string`
 
 **Actions:**
 - `setPage(page)` — navigate to page
 - `toggleSidebar()` — collapse/expand sidebar
+- `setTheme(theme)` — switch theme (sets `data-theme` attribute)
 - `setSearch(query)` — update search filter
 
 ## Components
@@ -61,8 +70,8 @@ UI state management.
 | Component | Purpose |
 |-----------|---------|
 | `Layout.tsx` | App shell with sidebar + header + content area + ambient gradient background |
-| `Sidebar.tsx` | 8-page navigation, XP bar with level, streak counter, collapsible |
-| `Header.tsx` | Page title, time range pills, search input, notification bell, avatar |
+| `Sidebar.tsx` | 10-page navigation, XP display with level, streak counter, collapsible |
+| `Header.tsx` | Page title, search input, notification bell, achievements button, baby diary button, settings gear |
 
 ### Dashboard
 | Component | Purpose |
@@ -78,8 +87,9 @@ UI state management.
 | Component | Purpose |
 |-----------|---------|
 | `Board.tsx` | Full kanban container, routes drag events to store |
-| `Column.tsx` | Drop target with header, value total, card list |
+| `Column.tsx` | Drop target with header, value total, card list, completion/lost modals |
 | `TaskCard.tsx` | Full task card with progress bar, priority badge, bookmark, hours |
+| `TaskEditModal.tsx` | Full edit modal for task fields (title, description, client, category, pricing, due date) |
 
 ### Gamification
 | Component | Purpose |
@@ -95,17 +105,19 @@ UI state management.
 | `GlassCard.tsx` | Reusable glassmorphism card with Framer Motion entry + hover |
 | `Modal.tsx` | Reusable modal with backdrop blur and spring animation |
 
-### Pages (standalone)
+### Pages
 | Page | Purpose |
 |------|---------|
 | `Dashboard.tsx` | Composes all dashboard components, calculates aggregate stats |
 | `TaskBoard.tsx` | Wraps `Board` component |
 | `Analytics.tsx` | 4 Recharts visualizations with quick-stat cards |
-| `NewTask.tsx` | "Open Position" form with live revenue preview |
-| `Clients.tsx` | Client grid with add/edit modal, per-client stats |
-| `Categories.tsx` | Category list with add/delete |
+| `NewTask.tsx` | "Open Position" form with hourly/fixed pricing toggle, hours+minutes input |
+| `Clients.tsx` | Client grid with add/edit modal, per-client stats, neumorphic cards |
+| `Categories.tsx` | Dedicated category management page with add/delete and color picker |
+| `Calendar.tsx` | Monthly calendar with Chicago timezone, task due dates, meetings |
 | `Goals.tsx` | Revenue targets with animated progress bars |
-| `Settings.tsx` | Trader profile, achievements grid, data import/export |
+| `Achievements.tsx` | Achievement cards with rarity tiers and 3D styling |
+| `Settings.tsx` | Theme toggle, data import/export, achievement grid |
 
 ## Types
 
@@ -116,23 +128,23 @@ interface Task {
   title: string;
   description?: string;
   clientId: string;
-  projectType: "web_design" | "printing" | "branding" | "consulting" | "other";
+  projectType: ProjectType;       // dynamic from categories store
   status: "lead" | "in_progress" | "waiting" | "completed" | "lost";
   priority: "low" | "medium" | "high" | "urgent";
-  assignee?: string;
-  estimatedHours: number;
+  estimatedHours: number;         // hours + minutes/60
   actualHours: number;
   hourlyRate: number;
   pnl: number;
   revenue: number;
-  progress: number;         // 0-100
+  progress: number;               // 0-100
+  pricingMode?: "hourly" | "fixed";
   createdAt: string;
   startedAt?: string;
   completedAt?: string;
   dueDate?: string;
   order: number;
-  tags?: string[];
   bookmarked?: boolean;
+  subtasks?: Subtask[];
 }
 ```
 
@@ -148,6 +160,31 @@ interface Client {
   notes?: string;
   createdAt: string;
   color: string;
+  avatar?: string;
+}
+```
+
+### `Category`
+```typescript
+interface Category {
+  id: string;
+  name: string;
+  color: string;
+}
+```
+
+### `Meeting`
+```typescript
+interface Meeting {
+  id: string;
+  title: string;
+  clientId: string;
+  date: string;
+  time: string;
+  duration: number;
+  notes?: string;
+  type: "call" | "video" | "in_person" | "review";
+  done: boolean;
 }
 ```
 
@@ -176,12 +213,14 @@ interface Achievement {
 - `buildDailySnapshots(tasks)` — cumulative daily data for equity curve
 - `formatCurrency(value)` / `formatCurrencyFull(value)` — display helpers
 
-### `gamification.ts`
-- `xpForLevel(level)` / `getLevelFromXP(xp)` — exponential leveling curve
-- `rollReward()` — variable reward with 1%/4%/10%/20% bonus tiers
-- `getPositiveFrame(task)` — "losses disguised as wins" messaging
-- `getStreakMessage(streak)` — milestone streak messages
-- `ACHIEVEMENTS` — 10 achievement definitions (common → legendary)
+### `timezone.ts`
+- `todayLocal()` — today's date in "YYYY-MM-DD" format, America/Chicago timezone
+- `tomorrowLocal()` — tomorrow's date in "YYYY-MM-DD" format, America/Chicago timezone
+- `nowTimeLocal()` — current time in "HH:MM" format, America/Chicago timezone
+
+### `api.ts` / `sync.ts`
+- Backend sync utilities for Express/SQLite API
+- Auto-sync on app load with localStorage fallback
 
 ### `seedData.ts`
 - `SEED_CLIENTS` — 6 demo clients with colors and rates

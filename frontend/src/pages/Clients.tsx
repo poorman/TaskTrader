@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Search, Mail, Phone, Edit2, Trash2 } from "lucide-react";
 import { useTaskStore } from "../stores/taskStore";
+import { useUIStore } from "../stores/uiStore";
 import Modal from "../components/shared/Modal";
 
 export default function Clients() {
@@ -11,6 +12,8 @@ export default function Clients() {
   const updateClient = useTaskStore((s) => s.updateClient);
   const deleteClient = useTaskStore((s) => s.deleteClient);
 
+  const theme = useUIStore((s) => s.theme);
+  const isLight = theme === "light";
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -77,7 +80,7 @@ export default function Clients() {
   return (
     <div className="max-w-[1000px] mx-auto space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div className="relative">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
           <input
@@ -85,7 +88,7 @@ export default function Clients() {
             placeholder="Search clients..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-8 pr-4 py-2 rounded-xl glass bg-transparent border border-glass-border text-white text-sm placeholder-gray-500 focus:outline-none focus:border-profit/30 w-64"
+            className="pl-8 pr-4 py-2 rounded-xl glass bg-transparent border border-glass-border text-white text-sm placeholder-gray-500 focus:outline-none focus:border-profit/30 w-full sm:w-64"
           />
         </div>
         <motion.button
@@ -112,7 +115,7 @@ export default function Clients() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ delay: i * 0.05 }}
-                className="glass rounded-2xl p-4 card-shine group relative"
+                className="client-card glass rounded-2xl p-4 card-shine group relative"
               >
                 {/* Actions */}
                 <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -136,8 +139,15 @@ export default function Clients() {
                 {/* Client info */}
                 <div className="flex items-center gap-3 mb-3">
                   <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold text-white"
-                    style={{ background: c.color + "30", color: c.color }}
+                    className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold"
+                    style={isLight ? {
+                      background: `linear-gradient(145deg, #e8edf4, #d4d9e0)`,
+                      boxShadow: `3px 3px 6px #b8bec7, -3px -3px 6px #ffffff`,
+                      color: "#636e72",
+                    } : {
+                      background: c.color + "20",
+                      color: c.color,
+                    }}
                   >
                     {c.name.charAt(0)}
                   </div>
@@ -185,7 +195,7 @@ export default function Clients() {
                     <p className="text-[9px] text-gray-500 uppercase">P&L</p>
                     <p
                       className="text-sm font-mono font-bold"
-                      style={{ color: s.pnl >= 0 ? "#00ff88" : "#ff4466" }}
+                      style={{ color: s.pnl >= 0 ? (isLight ? "#2dce89" : "#00ff88") : "#ff4466" }}
                     >
                       {s.pnl >= 0 ? "+" : ""}${s.pnl.toLocaleString()}
                     </p>
@@ -216,7 +226,7 @@ export default function Clients() {
               placeholder="Client name"
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-1 block">Company</label>
               <input type="text" value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} className={inputClass} />
@@ -226,7 +236,7 @@ export default function Clients() {
               <input type="number" value={form.defaultHourlyRate} onChange={(e) => setForm({ ...form, defaultHourlyRate: Number(e.target.value) })} className={inputClass} />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-1 block">Email</label>
               <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className={inputClass} />

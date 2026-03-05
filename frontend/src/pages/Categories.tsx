@@ -11,11 +11,10 @@ export default function Categories() {
 
   const [name, setName] = useState("");
   const [color, setColor] = useState("#3b82f6");
-  const [icon, setIcon] = useState("📁");
 
   const handleAdd = () => {
     if (!name.trim()) return;
-    addCategory({ name: name.trim(), color, icon });
+    addCategory({ name: name.trim(), color });
     setName("");
   };
 
@@ -41,17 +40,7 @@ export default function Categories() {
               onChange={(e) => setName(e.target.value)}
               placeholder="Category name"
               className="w-full px-3 py-2 rounded-lg bg-white/[0.03] border border-glass-border text-white text-sm focus:outline-none focus:border-profit/30"
-            />
-          </div>
-          <div>
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-1 block">
-              Icon
-            </label>
-            <input
-              type="text"
-              value={icon}
-              onChange={(e) => setIcon(e.target.value)}
-              className="w-16 px-3 py-2 rounded-lg bg-white/[0.03] border border-glass-border text-white text-sm text-center focus:outline-none"
+              onKeyDown={(e) => e.key === "Enter" && handleAdd()}
             />
           </div>
           <div>
@@ -95,11 +84,9 @@ export default function Categories() {
               >
                 <div className="flex items-center gap-3">
                   <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center text-lg"
-                    style={{ background: cat.color + "20" }}
-                  >
-                    {cat.icon}
-                  </div>
+                    className="w-3 h-3 rounded-full shrink-0"
+                    style={{ background: cat.color }}
+                  />
                   <div>
                     <h3 className="text-sm font-semibold text-white">
                       {cat.name}
@@ -109,18 +96,12 @@ export default function Categories() {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div
-                    className="w-4 h-4 rounded-full"
-                    style={{ background: cat.color }}
-                  />
-                  <button
-                    onClick={() => deleteCategory(cat.id)}
-                    className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-loss/10 text-gray-500 hover:text-loss transition-all"
-                  >
-                    <Trash2 size={12} />
-                  </button>
-                </div>
+                <button
+                  onClick={() => deleteCategory(cat.id)}
+                  className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-loss/10 text-gray-500 hover:text-loss transition-all"
+                >
+                  <Trash2 size={12} />
+                </button>
               </motion.div>
             );
           })}

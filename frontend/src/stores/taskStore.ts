@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { Task, TaskStatus, Client, Category, Goal } from "../types";
+import type { Task, TaskStatus, Client, Category, Goal, Meeting, Subtask } from "../types";
 import { v4 as uuid } from "uuid";
 
 interface TaskStore {
@@ -8,16 +8,22 @@ interface TaskStore {
   clients: Client[];
   categories: Category[];
   goals: Goal[];
+  meetings: Meeting[];
 
   // Task CRUD
-  addTask: (task: Omit<Task, "id" | "createdAt" | "order" | "pnl" | "revenue" | "progress" | "actualHours">) => string;
+  addTask: (task: Omit<Task, "id" | "createdAt" | "order" | "pnl" | "revenue" | "progress" | "actualHours"> & { revenue?: number }) => string;
   updateTask: (id: string, partial: Partial<Task>) => void;
   deleteTask: (id: string) => void;
   moveTask: (id: string, status: TaskStatus) => void;
-  completeTask: (id: string, actualHours: number) => void;
+  completeTask: (id: string, actualHours: number, hourlyRate?: number) => void;
   loseTask: (id: string, reason?: string) => void;
   reorderTasks: (status: TaskStatus, orderedIds: string[]) => void;
   toggleBookmark: (id: string) => void;
+
+  // Subtask CRUD
+  addSubtask: (taskId: string, title: string) => void;
+  toggleSubtask: (taskId: string, subtaskId: string) => void;
+  deleteSubtask: (taskId: string, subtaskId: string) => void;
 
   // Client CRUD
   addClient: (client: Omit<Client, "id" | "createdAt">) => string;
@@ -32,6 +38,12 @@ interface TaskStore {
   addGoal: (goal: Omit<Goal, "id" | "createdAt" | "currentRevenue">) => string;
   deleteGoal: (id: string) => void;
 
+  // Meeting CRUD
+  addMeeting: (meeting: Omit<Meeting, "id" | "done">) => string;
+  updateMeeting: (id: string, partial: Partial<Meeting>) => void;
+  deleteMeeting: (id: string) => void;
+  toggleMeetingDone: (id: string) => void;
+
   // Bulk seed
   seed: (tasks: Task[], clients: Client[]) => void;
 }
@@ -42,12 +54,13 @@ export const useTaskStore = create<TaskStore>()(
       tasks: [],
       clients: [],
       categories: [
-        { id: "web_design", name: "Web Design", color: "#3b82f6", icon: "🌐" },
-        { id: "printing", name: "Printing", color: "#22c55e", icon: "🖨️" },
-        { id: "branding", name: "Branding", color: "#a855f7", icon: "✨" },
-        { id: "consulting", name: "Consulting", color: "#ffaa00", icon: "💡" },
+        { id: "web_design", name: "Web Design", color: "#3b82f6" },
+        { id: "printing", name: "Printing", color: "#22c55e" },
+        { id: "branding", name: "Branding", color: "#a855f7" },
+        { id: "consulting", name: "Consulting", color: "#ffaa00" },
       ],
       goals: [],
+      meetings: [],
 
       addTask: (partial) => {
         const id = uuid();
@@ -61,7 +74,7 @@ export const useTaskStore = create<TaskStore>()(
               createdAt: now,
               order: s.tasks.filter((t) => t.status === partial.status).length,
               pnl: 0,
-              revenue: partial.estimatedHours * partial.hourlyRate,
+              revenue: partial.revenue ?? partial.estimatedHours * partial.hourlyRate,
               progress: 0,
               actualHours: 0,
             },
@@ -78,8 +91,9 @@ export const useTaskStore = create<TaskStore>()(
                   ...t,
                   ...partial,
                   revenue:
+                    partial.revenue ??
                     (partial.estimatedHours ?? t.estimatedHours) *
-                    (partial.hourlyRate ?? t.hourlyRate),
+                      (partial.hourlyRate ?? t.hourlyRate),
                 }
               : t
           ),
@@ -127,13 +141,15 @@ export const useTaskStore = create<TaskStore>()(
           }),
         })),
 
-      completeTask: (id, actualHours) =>
+      completeTask: (id, actualHours, hourlyRate) =>
         set((s) => ({
           tasks: s.tasks.map((t) => {
             if (t.id !== id) return t;
-            const pnl = (t.estimatedHours - actualHours) * t.hourlyRate;
+            const rate = hourlyRate ?? t.hourlyRate;
+            const pnl = t.revenue - actualHours * rate;
             return {
               ...t,
+              hourlyRate: rate,
               status: "completed" as TaskStatus,
               actualHours,
               pnl,
@@ -219,6 +235,80 @@ export const useTaskStore = create<TaskStore>()(
 
       deleteGoal: (id) =>
         set((s) => ({ goals: s.goals.filter((g) => g.id !== id) })),
+
+      addSubtask: (taskId, title) =>
+        set((s) => ({
+          tasks: s.tasks.map((t) =>
+            t.id === taskId
+              ? {
+                  ...t,
+                  subtasks: [
+                    ...(t.subtasks || []),
+                    { id: uuid(), title, done: false } as Subtask,
+                  ],
+                }
+              : t
+          ),
+        })),
+
+      toggleSubtask: (taskId, subtaskId) =>
+        set((s) => ({
+          tasks: s.tasks.map((t) => {
+            if (t.id !== taskId) return t;
+            const subtasks = (t.subtasks || []).map((st) =>
+              st.id === subtaskId ? { ...st, done: !st.done } : st
+            );
+            const doneCount = subtasks.filter((st) => st.done).length;
+            const progress =
+              subtasks.length > 0
+                ? Math.round((doneCount / subtasks.length) * 100)
+                : t.progress;
+            return { ...t, subtasks, progress };
+          }),
+        })),
+
+      deleteSubtask: (taskId, subtaskId) =>
+        set((s) => ({
+          tasks: s.tasks.map((t) => {
+            if (t.id !== taskId) return t;
+            const subtasks = (t.subtasks || []).filter(
+              (st) => st.id !== subtaskId
+            );
+            const doneCount = subtasks.filter((st) => st.done).length;
+            const progress =
+              subtasks.length > 0
+                ? Math.round((doneCount / subtasks.length) * 100)
+                : 0;
+            return { ...t, subtasks, progress };
+          }),
+        })),
+
+      addMeeting: (partial) => {
+        const id = uuid();
+        set((s) => ({
+          meetings: [...s.meetings, { ...partial, id, done: false }],
+        }));
+        return id;
+      },
+
+      updateMeeting: (id, partial) =>
+        set((s) => ({
+          meetings: s.meetings.map((m) =>
+            m.id === id ? { ...m, ...partial } : m
+          ),
+        })),
+
+      deleteMeeting: (id) =>
+        set((s) => ({
+          meetings: s.meetings.filter((m) => m.id !== id),
+        })),
+
+      toggleMeetingDone: (id) =>
+        set((s) => ({
+          meetings: s.meetings.map((m) =>
+            m.id === id ? { ...m, done: !m.done } : m
+          ),
+        })),
 
       seed: (tasks, clients) => set({ tasks, clients }),
     }),

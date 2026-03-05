@@ -4,9 +4,11 @@ import { Plus } from "lucide-react";
 import { useTaskStore } from "../stores/taskStore";
 import { useUIStore } from "../stores/uiStore";
 import type { ProjectType, Priority, TaskStatus } from "../types";
+import { tomorrowLocal } from "../utils/timezone";
 
 export default function NewTask() {
   const clients = useTaskStore((s) => s.clients);
+  const categories = useTaskStore((s) => s.categories);
   const addTask = useTaskStore((s) => s.addTask);
   const setPage = useUIStore((s) => s.setPage);
 
@@ -15,14 +17,23 @@ export default function NewTask() {
   const [clientId, setClientId] = useState(clients[0]?.id || "");
   const [projectType, setProjectType] = useState<ProjectType>("web_design");
   const [priority, setPriority] = useState<Priority>("medium");
-  const [estimatedHours, setEstimatedHours] = useState(8);
+  const [estHours, setEstHours] = useState(8);
+  const [estMinutes, setEstMinutes] = useState(0);
+  const estimatedHours = estHours + estMinutes / 60;
   const [hourlyRate, setHourlyRate] = useState(
     clients.find((c) => c.id === clientId)?.defaultHourlyRate || 75
   );
-  const [dueDate, setDueDate] = useState("");
+  const [dueDate, setDueDate] = useState(tomorrowLocal());
   const [status, setStatus] = useState<TaskStatus>("lead");
+  const [pricingMode, setPricingMode] = useState<"hourly" | "fixed">("hourly");
+  const [fixedPrice, setFixedPrice] = useState(0);
 
-  const revenue = estimatedHours * hourlyRate;
+  const revenue =
+    pricingMode === "fixed" ? fixedPrice : estimatedHours * hourlyRate;
+  const effectiveRate =
+    pricingMode === "fixed" && estimatedHours > 0
+      ? fixedPrice / estimatedHours
+      : hourlyRate;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,8 +46,10 @@ export default function NewTask() {
       status,
       priority,
       estimatedHours,
-      hourlyRate,
+      hourlyRate: effectiveRate,
       dueDate: dueDate || undefined,
+      pricingMode,
+      ...(pricingMode === "fixed" ? { revenue: fixedPrice } : {}),
     });
     setPage("taskboard");
   };
@@ -52,7 +65,7 @@ export default function NewTask() {
       animate={{ opacity: 1, y: 0 }}
       className="max-w-2xl mx-auto"
     >
-      <div className="glass rounded-2xl p-6">
+      <div className="glass rounded-2xl p-4 sm:p-6">
         <h2 className="font-display text-lg font-semibold mb-6">
           Open New Position
         </h2>
@@ -83,7 +96,7 @@ export default function NewTask() {
           </div>
 
           {/* Row: Client + Type */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <label className={labelClass}>Client (Ticker)</label>
               <select
@@ -103,23 +116,24 @@ export default function NewTask() {
               </select>
             </div>
             <div>
-              <label className={labelClass}>Project Type</label>
+              <label className={labelClass}>Project Type / Category</label>
               <select
                 value={projectType}
                 onChange={(e) => setProjectType(e.target.value as ProjectType)}
                 className={inputClass}
               >
-                <option value="web_design" className="bg-surface-2">Web Design</option>
-                <option value="printing" className="bg-surface-2">Printing</option>
-                <option value="branding" className="bg-surface-2">Branding</option>
-                <option value="consulting" className="bg-surface-2">Consulting</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id} className="bg-surface-2">
+                    {cat.name}
+                  </option>
+                ))}
                 <option value="other" className="bg-surface-2">Other</option>
               </select>
             </div>
           </div>
 
           {/* Row: Priority + Status */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <label className={labelClass}>Priority</label>
               <select
@@ -146,45 +160,148 @@ export default function NewTask() {
             </div>
           </div>
 
-          {/* Row: Hours + Rate + Due */}
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className={labelClass}>Est. Hours</label>
-              <input
-                type="number"
-                value={estimatedHours}
-                onChange={(e) => setEstimatedHours(Number(e.target.value))}
-                min={0.5}
-                step={0.5}
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label className={labelClass}>Hourly Rate ($)</label>
-              <input
-                type="number"
-                value={hourlyRate}
-                onChange={(e) => setHourlyRate(Number(e.target.value))}
-                min={1}
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label className={labelClass}>Due Date</label>
-              <input
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                className={inputClass}
-              />
+          {/* Pricing Mode Toggle */}
+          <div>
+            <label className={labelClass}>Pricing</label>
+            <div className="flex gap-1 glass rounded-xl p-1 w-fit">
+              <button
+                type="button"
+                onClick={() => setPricingMode("hourly")}
+                className={`px-4 py-1.5 text-xs font-medium rounded-lg transition-all ${
+                  pricingMode === "hourly"
+                    ? "bg-white/10 text-white"
+                    : "text-gray-400 hover:text-white"
+                }`}
+              >
+                Hourly Rate
+              </button>
+              <button
+                type="button"
+                onClick={() => setPricingMode("fixed")}
+                className={`px-4 py-1.5 text-xs font-medium rounded-lg transition-all ${
+                  pricingMode === "fixed"
+                    ? "bg-white/10 text-white"
+                    : "text-gray-400 hover:text-white"
+                }`}
+              >
+                Fixed Price
+              </button>
             </div>
           </div>
 
+          {/* Row: Hours + Rate/Price + Due */}
+          {pricingMode === "hourly" ? (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+              <div>
+                <label className={labelClass}>Est. Time</label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type="number"
+                      value={estHours}
+                      onChange={(e) => setEstHours(Math.max(0, Number(e.target.value)))}
+                      min={0}
+                      className={inputClass}
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-500">hr</span>
+                  </div>
+                  <div className="relative flex-1">
+                    <input
+                      type="number"
+                      value={estMinutes}
+                      onChange={(e) => setEstMinutes(Math.max(0, Math.min(59, Number(e.target.value))))}
+                      min={0}
+                      max={59}
+                      step={5}
+                      className={inputClass}
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-500">min</span>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label className={labelClass}>Hourly Rate ($)</label>
+                <input
+                  type="number"
+                  value={hourlyRate}
+                  onChange={(e) => setHourlyRate(Number(e.target.value))}
+                  min={1}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Due Date</label>
+                <input
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                  className={inputClass}
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+              <div>
+                <label className={labelClass}>Fixed Price ($)</label>
+                <input
+                  type="number"
+                  value={fixedPrice}
+                  onChange={(e) => setFixedPrice(Number(e.target.value))}
+                  min={1}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Est. Time</label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type="number"
+                      value={estHours}
+                      onChange={(e) => setEstHours(Math.max(0, Number(e.target.value)))}
+                      min={0}
+                      className={inputClass}
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-500">hr</span>
+                  </div>
+                  <div className="relative flex-1">
+                    <input
+                      type="number"
+                      value={estMinutes}
+                      onChange={(e) => setEstMinutes(Math.max(0, Math.min(59, Number(e.target.value))))}
+                      min={0}
+                      max={59}
+                      step={5}
+                      className={inputClass}
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-500">min</span>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label className={labelClass}>Due Date</label>
+                <input
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                  className={inputClass}
+                />
+              </div>
+            </div>
+          )}
+
           {/* Revenue preview */}
           <div className="glass rounded-xl p-4 flex items-center justify-between">
-            <span className="text-xs text-gray-400 font-medium">
-              Estimated Revenue
-            </span>
+            <div>
+              <span className="text-xs text-gray-400 font-medium">
+                Estimated Revenue
+              </span>
+              {pricingMode === "fixed" && estimatedHours > 0 && (
+                <span className="text-[10px] text-gray-500 ml-2">
+                  (${effectiveRate.toFixed(0)}/hr effective)
+                </span>
+              )}
+            </div>
             <span className="text-xl font-mono font-bold text-profit">
               ${revenue.toLocaleString()}
             </span>

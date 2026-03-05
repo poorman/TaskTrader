@@ -1,6 +1,24 @@
 services:
-  tasktrader:
-    build: .
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "2030:2030"
+    depends_on:
+      - backend
     restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    volumes:
+      - tasktrader-data:/app/data
+    environment:
+      - PORT=2031
+      - DATA_DIR=/app/data
+    restart: unless-stopped
+
+volumes:
+  tasktrader-data:

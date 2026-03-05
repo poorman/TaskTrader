@@ -6,16 +6,16 @@ const config: Config = {
     extend: {
       colors: {
         surface: {
-          0: "#060a13",
-          1: "#0c1121",
-          2: "#111827",
-          3: "#1a2235",
-          4: "#243049",
+          0: "rgb(var(--surface-0) / <alpha-value>)",
+          1: "rgb(var(--surface-1) / <alpha-value>)",
+          2: "rgb(var(--surface-2) / <alpha-value>)",
+          3: "rgb(var(--surface-3) / <alpha-value>)",
+          4: "rgb(var(--surface-4) / <alpha-value>)",
         },
         profit: {
-          DEFAULT: "#00ff88",
-          dim: "rgba(0,255,136,0.15)",
-          glow: "rgba(0,255,136,0.25)",
+          DEFAULT: "rgb(var(--color-profit) / <alpha-value>)",
+          dim: "rgb(var(--color-profit) / 0.15)",
+          glow: "rgb(var(--color-profit) / 0.25)",
         },
         loss: {
           DEFAULT: "#ff4466",
@@ -29,9 +29,9 @@ const config: Config = {
           cyan: "#06b6d4",
         },
         glass: {
-          DEFAULT: "rgba(255,255,255,0.03)",
-          border: "rgba(255,255,255,0.08)",
-          hover: "rgba(255,255,255,0.06)",
+          DEFAULT: "var(--glass-bg)",
+          border: "var(--glass-border)",
+          hover: "var(--glass-hover)",
         },
       },
       fontFamily: {

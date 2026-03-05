@@ -8,6 +8,7 @@ import {
   getPositiveFrame,
   getStreakMessage,
 } from "../utils/gamification";
+import { todayLocal, yesterdayLocal } from "../utils/timezone";
 
 interface RewardEvent {
   id: string;
@@ -21,6 +22,8 @@ interface RewardEvent {
 
 interface GamificationStore extends GamificationState {
   pendingRewards: RewardEvent[];
+  dailyCompleted: number; // tasks completed today
+  dailyTarget: number; // tasks needed per day for streak (3)
   // Actions
   onTaskCompleted: (task: {
     pnl: number;
@@ -29,7 +32,9 @@ interface GamificationStore extends GamificationState {
     actualHours: number;
     revenue: number;
   }) => void;
+  onTaskReopened: () => void;
   checkStreak: () => void;
+  syncDailyCompleted: (tasks: { status: string; completedAt?: string }[]) => void;
   dismissReward: (id: string) => void;
   checkAchievements: (context: {
     totalCompleted: number;
@@ -38,6 +43,7 @@ interface GamificationStore extends GamificationState {
     streak: number;
     fastestRatio: number; // actualHours/estimatedHours
   }) => void;
+  resetGamification: () => void;
 }
 
 export const useGamificationStore = create<GamificationStore>()(
@@ -51,6 +57,8 @@ export const useGamificationStore = create<GamificationStore>()(
       totalTasksCompleted: 0,
       multiplier: 1,
       pendingRewards: [],
+      dailyCompleted: 0,
+      dailyTarget: 3,
 
       onTaskCompleted: (task) => {
         const reward = rollReward();
@@ -63,40 +71,92 @@ export const useGamificationStore = create<GamificationStore>()(
 
         set((s) => {
           const newXP = s.xp + totalXP;
-          const levelInfo = getLevelFromXP(newXP);
-          const today = new Date().toISOString().slice(0, 10);
+          const today = todayLocal();
+          const newDaily = (s.lastActiveDate === today ? s.dailyCompleted : 0) + 1;
+          const rewards = [
+            ...s.pendingRewards,
+            {
+              id,
+              xp: totalXP,
+              message: `+${totalXP} XP`,
+              multiplierLabel: reward.multiplierLabel,
+              isJackpot: reward.isJackpot,
+              positiveFrame,
+              timestamp: Date.now(),
+            },
+          ];
+
+          // Daily target prize: 3 tasks/day
+          let bonusXP = 0;
+          if (newDaily === s.dailyTarget) {
+            bonusXP = 75;
+            rewards.push({
+              id: "daily-" + Date.now(),
+              xp: bonusXP,
+              message: `+${bonusXP} XP — Daily Target Hit!`,
+              multiplierLabel: "3/3 TODAY!",
+              isJackpot: false,
+              positiveFrame: "You crushed your daily goal!",
+              timestamp: Date.now() + 1,
+            });
+          }
 
           return {
-            xp: newXP,
-            level: levelInfo.level,
+            xp: newXP + bonusXP,
+            level: getLevelFromXP(newXP + bonusXP).level,
             totalTasksCompleted: s.totalTasksCompleted + 1,
+            dailyCompleted: newDaily,
             lastActiveDate: today,
-            pendingRewards: [
-              ...s.pendingRewards,
-              {
-                id,
-                xp: totalXP,
-                message: `+${totalXP} XP`,
-                multiplierLabel: reward.multiplierLabel,
-                isJackpot: reward.isJackpot,
-                positiveFrame,
-                timestamp: Date.now(),
-              },
-            ],
+            pendingRewards: rewards,
           };
         });
       },
 
+      onTaskReopened: () => {
+        // Reverse: deduct base XP (25) and decrement counters
+        set((s) => {
+          const today = todayLocal();
+          const deduct = 25;
+          const newXP = Math.max(0, s.xp - deduct);
+          const levelInfo = getLevelFromXP(newXP);
+          const newDaily = s.lastActiveDate === today
+            ? Math.max(0, s.dailyCompleted - 1)
+            : s.dailyCompleted;
+          return {
+            xp: newXP,
+            level: levelInfo.level,
+            totalTasksCompleted: Math.max(0, s.totalTasksCompleted - 1),
+            dailyCompleted: newDaily,
+          };
+        });
+      },
+
+      syncDailyCompleted: (tasks) => {
+        const today = todayLocal();
+        const completedToday = tasks.filter(
+          (t) =>
+            t.status === "completed" &&
+            t.completedAt &&
+            new Date(t.completedAt).toLocaleDateString("en-CA", {
+              timeZone: "America/Chicago",
+            }) === today
+        ).length;
+        const current = get().dailyCompleted;
+        if (completedToday > current) {
+          set({ dailyCompleted: completedToday, lastActiveDate: today });
+        }
+      },
+
       checkStreak: () => {
-        const today = new Date().toISOString().slice(0, 10);
+        const today = todayLocal();
         const last = get().lastActiveDate;
         if (last === today) return;
 
-        const yesterday = new Date(Date.now() - 86400000)
-          .toISOString()
-          .slice(0, 10);
+        const yesterday = yesterdayLocal();
         set((s) => {
-          const newStreak = last === yesterday ? s.streak + 1 : 1;
+          // Streak only continues if yesterday hit the daily target (3 tasks)
+          const hitTargetYesterday = last === yesterday && s.dailyCompleted >= s.dailyTarget;
+          const newStreak = hitTargetYesterday ? s.streak + 1 : (last === yesterday ? s.streak : 0);
           const msg = getStreakMessage(newStreak);
           const newRewards = msg
             ? [
@@ -115,6 +175,7 @@ export const useGamificationStore = create<GamificationStore>()(
           return {
             streak: newStreak,
             lastActiveDate: today,
+            dailyCompleted: 0, // reset for new day
             xp: s.xp + (msg ? newStreak * 10 : 0),
             pendingRewards: newRewards,
           };
@@ -192,7 +253,34 @@ export const useGamificationStore = create<GamificationStore>()(
           }));
         }
       },
+      resetGamification: () =>
+        set({
+          xp: 0,
+          level: 1,
+          streak: 0,
+          lastActiveDate: "",
+          achievements: [],
+          totalTasksCompleted: 0,
+          multiplier: 1,
+          pendingRewards: [],
+          dailyCompleted: 0,
+        }),
     }),
-    { name: "tasktrader-gamification" }
+    {
+      name: "tasktrader-gamification",
+      version: 2,
+      migrate: () => ({
+        xp: 0,
+        level: 1,
+        streak: 0,
+        lastActiveDate: "",
+        achievements: [],
+        totalTasksCompleted: 0,
+        multiplier: 1,
+        pendingRewards: [],
+        dailyCompleted: 0,
+        dailyTarget: 3,
+      }),
+    }
   )
 );

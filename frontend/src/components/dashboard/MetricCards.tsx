@@ -7,29 +7,26 @@ interface MetricData {
   prefix?: string;
   suffix?: string;
   color: string;
-  icon: string;
+  icon: React.ReactNode;
 }
 
 export default function MetricCards({ metrics }: { metrics: MetricData[] }) {
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
       {metrics.map((m, i) => (
         <motion.div
           key={m.label}
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.3 + i * 0.08 }}
-          className="glass rounded-2xl p-4 card-shine relative overflow-hidden group"
-          style={{
-            boxShadow: `0 0 20px ${m.color}10, 0 0 40px ${m.color}05`,
-          }}
+          className="metric-card glass rounded-2xl p-3 sm:p-4 card-shine relative overflow-hidden group"
         >
           <div
             className="absolute -top-8 -right-8 w-20 h-20 rounded-full blur-2xl opacity-15 group-hover:opacity-25 transition-opacity pointer-events-none"
             style={{ background: m.color }}
           />
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-2 flex items-center gap-1">
-            <span>{m.icon}</span>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-2 flex items-center gap-1.5">
+            <span className="metric-icon" style={{ color: m.color }}>{m.icon}</span>
             {m.label}
           </p>
           <AnimatedNumber

@@ -1,16 +1,15 @@
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
   BarChart3,
   KanbanSquare,
-  PlusCircle,
   Users,
-  Tag,
+  CalendarDays,
   Target,
-  Settings,
   ChevronLeft,
   ChevronRight,
   Zap,
+  X,
 } from "lucide-react";
 import { useUIStore } from "../../stores/uiStore";
 import { useGamificationStore } from "../../stores/gamificationStore";
@@ -22,31 +21,25 @@ const NAV_ITEMS: { page: Page; icon: typeof LayoutDashboard; label: string }[] =
     { page: "dashboard", icon: LayoutDashboard, label: "Dashboard" },
     { page: "analytics", icon: BarChart3, label: "P&L Analytics" },
     { page: "taskboard", icon: KanbanSquare, label: "Task Board" },
-    { page: "newtask", icon: PlusCircle, label: "New Task" },
     { page: "clients", icon: Users, label: "Clients" },
-    { page: "categories", icon: Tag, label: "Categories" },
+    { page: "calendar", icon: CalendarDays, label: "Calendar" },
     { page: "goals", icon: Target, label: "Goals" },
-    { page: "settings", icon: Settings, label: "Settings" },
   ];
 
-export default function Sidebar() {
-  const { activePage, setPage, sidebarCollapsed, toggleSidebar } = useUIStore();
-  const { xp, streak } = useGamificationStore();
+function SidebarContent({ expanded }: { expanded: boolean }) {
+  const { activePage, setPage } = useUIStore();
+  const { xp, streak, dailyCompleted, dailyTarget } = useGamificationStore();
   const levelInfo = getLevelFromXP(xp);
   const xpPct = (levelInfo.currentXP / levelInfo.nextLevelXP) * 100;
 
   return (
-    <motion.aside
-      className="h-full flex flex-col glass border-r border-glass-border"
-      animate={{ width: sidebarCollapsed ? 64 : 220 }}
-      transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
-    >
+    <>
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-4 h-14 border-b border-glass-border shrink-0">
         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-profit to-accent-cyan flex items-center justify-center shrink-0">
-          <Zap size={16} className="text-surface-0" />
+          <Zap size={16} className="text-white" />
         </div>
-        {!sidebarCollapsed && (
+        {expanded && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -78,7 +71,7 @@ export default function Sidebar() {
             >
               {active && (
                 <motion.div
-                  layoutId="sidebar-active"
+                  layoutId={expanded ? "sidebar-active" : "sidebar-active-collapsed"}
                   className="absolute inset-0 rounded-xl glass-active"
                   style={{
                     boxShadow:
@@ -97,7 +90,7 @@ export default function Sidebar() {
                   active ? "text-profit" : ""
                 }`}
               />
-              {!sidebarCollapsed && (
+              {expanded && (
                 <span className="relative z-10 truncate">{label}</span>
               )}
             </button>
@@ -106,7 +99,7 @@ export default function Sidebar() {
       </nav>
 
       {/* XP Bar + Level */}
-      {!sidebarCollapsed && (
+      {expanded && (
         <div className="px-3 pb-2">
           <div className="glass rounded-xl p-3 space-y-2">
             <div className="flex items-center justify-between text-[11px]">
@@ -114,7 +107,7 @@ export default function Sidebar() {
                 Level {levelInfo.level}
               </span>
               <span className="text-profit font-mono font-semibold">
-                {levelInfo.currentXP}/{levelInfo.nextLevelXP} XP
+                {xp} XP
               </span>
             </div>
             <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
@@ -125,27 +118,84 @@ export default function Sidebar() {
                 transition={{ duration: 0.8, ease: "easeOut" }}
               />
             </div>
-            {streak > 0 && (
-              <div className="flex items-center gap-1 text-[10px] text-accent-amber">
-                <span>🔥</span>
-                <span className="font-semibold">{streak}-day streak</span>
+            <div className="flex items-center justify-between text-[10px]">
+              {streak > 0 && (
+                <div className="flex items-center gap-1 text-accent-amber">
+                  <span>🔥</span>
+                  <span className="font-semibold">{streak}d streak</span>
+                </div>
+              )}
+              <div className="flex items-center gap-1 text-gray-400">
+                <span>🎯</span>
+                <span className="font-semibold"
+                  style={{ color: dailyCompleted >= dailyTarget ? "#00ff88" : undefined }}
+                >
+                  {dailyCompleted}/{dailyTarget} today
+                </span>
               </div>
-            )}
+            </div>
           </div>
         </div>
       )}
+    </>
+  );
+}
 
-      {/* Collapse toggle */}
-      <button
-        onClick={toggleSidebar}
-        className="h-10 flex items-center justify-center border-t border-glass-border text-gray-500 hover:text-gray-300 transition-colors shrink-0"
+export default function Sidebar() {
+  const { sidebarCollapsed, toggleSidebar, mobileMenuOpen, setMobileMenu } =
+    useUIStore();
+
+  return (
+    <>
+      {/* Desktop sidebar */}
+      <motion.aside
+        className="h-full hidden md:flex flex-col glass border-r border-glass-border"
+        animate={{ width: sidebarCollapsed ? 64 : 220 }}
+        transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
       >
-        {sidebarCollapsed ? (
-          <ChevronRight size={16} />
-        ) : (
-          <ChevronLeft size={16} />
+        <SidebarContent expanded={!sidebarCollapsed} />
+        {/* Collapse toggle */}
+        <button
+          onClick={toggleSidebar}
+          className="h-10 flex items-center justify-center border-t border-glass-border text-gray-500 hover:text-gray-300 transition-colors shrink-0"
+        >
+          {sidebarCollapsed ? (
+            <ChevronRight size={16} />
+          ) : (
+            <ChevronLeft size={16} />
+          )}
+        </button>
+      </motion.aside>
+
+      {/* Mobile overlay sidebar */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/60 z-40 md:hidden"
+              onClick={() => setMobileMenu(false)}
+            />
+            <motion.aside
+              initial={{ x: -280 }}
+              animate={{ x: 0 }}
+              exit={{ x: -280 }}
+              transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
+              className="fixed top-0 left-0 h-full w-[260px] z-50 md:hidden flex flex-col bg-surface-1 border-r border-glass-border"
+            >
+              <SidebarContent expanded />
+              <button
+                onClick={() => setMobileMenu(false)}
+                className="h-10 flex items-center justify-center border-t border-glass-border text-gray-500 hover:text-gray-300 transition-colors shrink-0"
+              >
+                <X size={16} />
+              </button>
+            </motion.aside>
+          </>
         )}
-      </button>
-    </motion.aside>
+      </AnimatePresence>
+    </>
   );
 }

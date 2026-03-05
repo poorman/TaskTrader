@@ -5,6 +5,7 @@ import { useGamificationStore } from "../stores/gamificationStore";
 import { SEED_TASKS, SEED_CLIENTS } from "../utils/seedData";
 import { getLevelFromXP, ACHIEVEMENTS } from "../utils/gamification";
 import { RARITY_COLORS } from "../utils/gamification";
+import { api } from "../utils/api";
 
 export default function Settings() {
   const tasks = useTaskStore((s) => s.tasks);
@@ -42,12 +43,26 @@ export default function Settings() {
   };
 
   const handleLoadDemo = () => {
+    localStorage.removeItem("tasktrader-cleared");
     seed(SEED_TASKS, SEED_CLIENTS);
   };
 
-  const handleClearAll = () => {
-    if (confirm("Are you sure? This will delete all tasks and clients.")) {
-      seed([], []);
+  const handleClearAll = async () => {
+    if (confirm("Are you sure? This will delete ALL data including tasks, clients, and achievements.")) {
+      try {
+        // 1. Clear backend FIRST (awaited, so it's confirmed before reload)
+        await api.saveState({ tasks: [], clients: [], categories: [], goals: [], meetings: [] });
+        await api.saveKey("gamification", { xp: 0, level: 1, streak: 0, lastActiveDate: "", achievements: [], totalTasksCompleted: 0, multiplier: 1, dailyCompleted: 0, dailyTarget: 3 });
+      } catch (err) {
+        console.warn("Failed to clear backend data:", err);
+      }
+      // 2. Clear localStorage so Zustand persist can't restore stale data
+      localStorage.removeItem("tasktrader-tasks");
+      localStorage.removeItem("tasktrader-gamification");
+      // 3. Mark as intentionally cleared so App.tsx won't auto-seed
+      localStorage.setItem("tasktrader-cleared", "1");
+      // 4. Force full reload — fresh state from empty backend + empty localStorage
+      window.location.reload();
     }
   };
 

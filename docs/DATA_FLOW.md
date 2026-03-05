@@ -10,36 +10,35 @@
                          │
                          ▼
     ┌──────────────────────────────────────────┐
-    │              BACKLOG                      │
-    │  status: "backlog"                        │
-    │  No timer, just queued                    │
+    │              LEAD                         │
+    │  status: "lead"                           │
+    │  Pipeline / prospect stage                │
     └──────────────────┬───────────────────────┘
                        │ moveTask(id, "in_progress")
-                       │ sets started_at = now()
+                       │ sets startedAt = now()
                        ▼
     ┌──────────────────────────────────────────┐
     │           IN PROGRESS                     │
     │  status: "in_progress"                    │
-    │  Timer running (actual_hours accumulates) │
-    │  Shows as "Open Position" on Dashboard    │
+    │  Active work, shows as "Open Position"    │
     └──────────────────┬───────────────────────┘
-                       │ moveTask(id, "review")
+                       │ moveTask(id, "waiting")
                        ▼
     ┌──────────────────────────────────────────┐
-    │             REVIEW                        │
-    │  status: "review"                         │
-    │  Pending approval / QA                    │
+    │             WAITING                       │
+    │  status: "waiting"                        │
+    │  Pending client response / review         │
     └──────────────────┬───────────────────────┘
-                       │ completeTask(id, actual_hours)
-                       │ sets completed_at = now()
-                       │ calculates P&L
-                       ▼
-    ┌──────────────────────────────────────────┐
-    │              DONE                         │
-    │  status: "done"                           │
-    │  P&L = (estimated - actual) × rate        │
-    │  Shows as "Closed Trade" in history       │
-    └──────────────────────────────────────────┘
+                       │
+              ┌────────┴────────┐
+              ▼                 ▼
+┌──────────────────┐  ┌──────────────────┐
+│   COMPLETED      │  │     LOST         │
+│   status:        │  │   status: "lost" │
+│   "completed"    │  │   Client dropped │
+│   P&L calculated │  │   Revenue = loss │
+│   Closed trade   │  │                  │
+└──────────────────┘  └──────────────────┘
 ```
 
 ## P&L Calculation Flow
@@ -58,9 +57,18 @@ pnl = hours_saved × hourly_rate
         └── pnl < 0  →  Loss (red) — took longer than estimated
 ```
 
-**Example:**
-- Estimated: 8 hours, Actual: 5 hours, Rate: $75/hr
-- P&L = (8 - 5) × $75 = +$225 (profitable trade)
+**Fixed-price P&L:**
+```
+pnl = fixed_price - (actual_hours × effective_hourly_rate)
+```
+
+## Revenue Calculation
+
+```
+Hourly mode:  revenue = estimatedHours × hourlyRate
+Fixed mode:   revenue = fixedPrice
+              effectiveRate = fixedPrice / estimatedHours
+```
 
 ## Data Persistence Flow
 
@@ -75,13 +83,18 @@ pnl = hours_saved × hourly_rate
                      │             │
                      ▼             ▼
               ┌───────────┐ ┌───────────┐
-              │  Export    │ │  Import   │
-              │  (JSON    │ │  (JSON    │
-              │  download)│ │  upload)  │
+              │  Backend   │ │  Export    │
+              │  Sync      │ │  (JSON    │
+              │  (Express/ │ │  download) │
+              │  SQLite)   │ │           │
               └───────────┘ └───────────┘
 ```
 
-Zustand's `persist` middleware auto-syncs store state to localStorage on every change. Export/import provides manual backup and data transfer.
+**Sync flow on app load:**
+1. `initSync()` fetches all data from backend API
+2. If backend has data, it replaces localStorage state
+3. If backend is unavailable, localStorage data is used
+4. JSON export/import provides manual backup
 
 ## Dashboard Data Flow
 
@@ -101,14 +114,14 @@ Zustand's `persist` middleware auto-syncs store state to localStorage on every c
               │ winRate      │                   └──────────────┘
               └──────────────┘
                      │
-              ┌──────┴──────┐
-              ▼             ▼
-       ┌───────────┐ ┌───────────┐
-       │TickerTape │ │ Activity  │
-       │           │ │ Feed      │
-       │ recent    │ │ status    │
-       │ closings  │ │ changes   │
-       └───────────┘ └───────────┘
+              ┌──────┼──────┐
+              ▼      ▼      ▼
+       ┌─────────┐ ┌────────────┐ ┌─────────────────┐
+       │Ticker   │ │ MiniKanban │ │ Revenue         │
+       │Tape     │ │            │ │ Breakdown       │
+       │recent   │ │ 5 columns  │ │ by project type │
+       │closings │ │ preview    │ │                 │
+       └─────────┘ └────────────┘ └─────────────────┘
 ```
 
 ## Kanban Drag-and-Drop Flow
@@ -117,35 +130,46 @@ Zustand's `persist` middleware auto-syncs store state to localStorage on every c
 User drags Card from Column A to Column B
         │
         ▼
-Framer Motion Reorder captures new position
+HTML5 drag events captured by Column drop target
         │
         ▼
 Board.tsx calls moveTask(id, newStatus)
         │
         ├── Updates task.status
-        ├── Updates task.order (position in new column)
-        ├── If moving to "in_progress": sets started_at
-        └── If moving to "done": triggers completion modal
+        ├── If moving to "in_progress": sets startedAt
+        ├── If moving to "completed": triggers completion modal
+        │       │
+        │       ▼
+        │   User enters actual_hours
+        │       │
+        │       ▼
+        │   completeTask(id, actual_hours)
+        │       │
+        │       ▼
+        │   P&L calculated → gamification triggered → XP awarded
+        │
+        └── If moving to "lost": triggers lost confirmation modal
                 │
                 ▼
-        User enters actual_hours
-                │
-                ▼
-        completeTask(id, actual_hours)
-                │
-                ▼
-        P&L calculated and stored
+            loseTask(id, reason)
 ```
 
-## Analytics Aggregation Flow
+## Gamification Flow
 
 ```
-taskStore.tasks[]
+Task completed
         │
-        ├── Filter by date range
+        ▼
+onTaskCompleted(task)
         │
-        ├──▶ aggregateByPeriod("week")  ──▶ RevenueChart
-        ├──▶ groupBy("client_id")        ──▶ ClientPnL
-        ├──▶ calculateWinRate()          ──▶ WinRate donut
-        └──▶ groupBy("day_of_week", "hour") ──▶ Heatmap
+        ├── Calculate base XP (50-100)
+        ├── Roll variable multiplier (1%→10x, 4%→5x, 10%→3x, 20%→2x)
+        ├── Apply streak multiplier
+        ├── Add XP → check level up
+        ├── Queue reward popup
+        └── Check achievement conditions
+                │
+                ▼
+        Display confetti + XP popup
+        Display achievement toast (if unlocked)
 ```

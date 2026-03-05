@@ -2,10 +2,12 @@ import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
 import { useGamificationStore } from "../../stores/gamificationStore";
+import { useUIStore } from "../../stores/uiStore";
 
 export default function RewardPopup() {
   const pendingRewards = useGamificationStore((s) => s.pendingRewards);
   const dismissReward = useGamificationStore((s) => s.dismissReward);
+  const theme = useUIStore((s) => s.theme);
   const reward = pendingRewards[0];
 
   useEffect(() => {
@@ -48,14 +50,20 @@ export default function RewardPopup() {
             className={`glass rounded-2xl px-6 py-4 flex items-center gap-4 relative overflow-hidden ${
               reward.isJackpot ? "ring-2 ring-accent-amber/50" : ""
             }`}
-            style={{
-              background: reward.isJackpot
-                ? "linear-gradient(135deg, rgba(255,170,0,0.15), rgba(168,85,247,0.1))"
-                : "rgba(17,24,39,0.95)",
-              borderColor: reward.isJackpot
-                ? "rgba(255,170,0,0.3)"
-                : "rgba(255,255,255,0.1)",
-            }}
+            style={
+              theme === "dark"
+                ? {
+                    background: reward.isJackpot
+                      ? "linear-gradient(135deg, rgba(255,170,0,0.15), rgba(168,85,247,0.1))"
+                      : "rgba(17,24,39,0.95)",
+                    borderColor: reward.isJackpot
+                      ? "rgba(255,170,0,0.3)"
+                      : "rgba(255,255,255,0.1)",
+                  }
+                : reward.isJackpot
+                  ? { background: "linear-gradient(135deg, rgba(255,170,0,0.1), rgba(168,85,247,0.08))" }
+                  : {}
+            }
           >
             {/* Shimmer on jackpot */}
             {reward.isJackpot && (

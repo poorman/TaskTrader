@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import type { ReactNode } from "react";
 import { X } from "lucide-react";
+import { useUIStore } from "../../stores/uiStore";
 
 interface Props {
   open: boolean;
@@ -17,6 +18,7 @@ export default function Modal({
   children,
   width = "max-w-lg",
 }: Props) {
+  const theme = useUIStore((s) => s.theme);
   return (
     <AnimatePresence>
       {open && (
@@ -36,10 +38,11 @@ export default function Modal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: "spring", damping: 25, stiffness: 400 }}
-            style={{
-              background: "rgba(17, 24, 39, 0.95)",
-              borderColor: "rgba(255,255,255,0.1)",
-            }}
+            style={
+              theme === "dark"
+                ? { background: "rgba(17, 24, 39, 0.95)", borderColor: "rgba(255,255,255,0.1)" }
+                : {}
+            }
           >
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-display text-lg font-semibold">{title}</h2>

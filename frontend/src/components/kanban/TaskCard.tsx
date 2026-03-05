@@ -1,28 +1,62 @@
-import { motion } from "framer-motion";
-import { Bookmark, Clock, GripVertical } from "lucide-react";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Bookmark,
+  Clock,
+  GripVertical,
+  ChevronDown,
+  Plus,
+  X,
+  CheckCircle2,
+  Circle,
+} from "lucide-react";
 import type { Task, Client } from "../../types";
 import { PriorityBadge } from "../shared/Badge";
 import { useTaskStore } from "../../stores/taskStore";
+import { useUIStore } from "../../stores/uiStore";
 
 export default function TaskCard({
   task,
   client,
   dragControls,
+  onEdit,
 }: {
   task: Task;
   client?: Client;
   dragControls?: boolean;
+  onEdit?: (task: Task) => void;
 }) {
   const toggleBookmark = useTaskStore((s) => s.toggleBookmark);
+  const addSubtask = useTaskStore((s) => s.addSubtask);
+  const toggleSubtask = useTaskStore((s) => s.toggleSubtask);
+  const deleteSubtask = useTaskStore((s) => s.deleteSubtask);
+  const theme = useUIStore((s) => s.theme);
+
+  const [expanded, setExpanded] = useState(false);
+  const [newSubtask, setNewSubtask] = useState("");
+
   const isProfit = task.pnl >= 0;
+  const subtasks = task.subtasks || [];
+  const doneCount = subtasks.filter((s) => s.done).length;
+  const profitColor = theme === "light" ? "#2dce89" : "#00ff88";
+  const lossColor = "#ff4466";
+  const neutralColor = theme === "light" ? "#2d3436" : "#e2e8f0";
   const progressColor =
     task.status === "lost"
-      ? "#ff4466"
+      ? lossColor
       : task.progress >= 80
-        ? "#00ff88"
+        ? profitColor
         : task.progress >= 50
           ? "#ffaa00"
           : "#3b82f6";
+
+  const handleAddSubtask = (e: React.FormEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!newSubtask.trim()) return;
+    addSubtask(task.id, newSubtask.trim());
+    setNewSubtask("");
+  };
 
   return (
     <motion.div
@@ -31,6 +65,7 @@ export default function TaskCard({
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
       whileHover={{ y: -2, transition: { duration: 0.15 } }}
+      onClick={() => onEdit?.(task)}
       className="glass rounded-xl p-3.5 cursor-grab active:cursor-grabbing group hover:border-white/10 transition-all relative"
     >
       {dragControls && (
@@ -73,7 +108,7 @@ export default function TaskCard({
       <div className="flex items-center justify-between mb-2">
         <span
           className="text-base font-mono font-bold"
-          style={{ color: task.status === "completed" || task.status === "lost" ? (isProfit ? "#00ff88" : "#ff4466") : "#e2e8f0" }}
+          style={{ color: task.status === "completed" || task.status === "lost" ? (isProfit ? profitColor : lossColor) : neutralColor }}
         >
           {task.status === "completed" || task.status === "lost"
             ? `${task.pnl >= 0 ? "+" : ""}$${task.pnl.toLocaleString()}`
@@ -92,7 +127,7 @@ export default function TaskCard({
       </div>
 
       {/* Progress bar */}
-      {task.progress > 0 && task.status !== "lost" && (
+      {(task.progress > 0 || subtasks.length > 0) && task.status !== "lost" && (
         <div className="h-1.5 rounded-full bg-white/5 overflow-hidden mb-2.5">
           <motion.div
             className="h-full rounded-full"
@@ -103,6 +138,120 @@ export default function TaskCard({
           />
         </div>
       )}
+
+      {/* Subtask summary + expand toggle */}
+      {(subtasks.length > 0 || task.status === "in_progress" || task.status === "lead") && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setExpanded(!expanded);
+          }}
+          onMouseDown={(e) => e.stopPropagation()}
+          className="w-full flex items-center justify-between text-[10px] text-gray-400 hover:text-gray-200 transition-colors mb-2.5 cursor-pointer"
+        >
+          <span className="flex items-center gap-1">
+            {subtasks.length > 0 ? (
+              <>
+                <CheckCircle2 size={10} className="text-profit" />
+                {doneCount}/{subtasks.length} subtasks
+              </>
+            ) : (
+              <>
+                <Plus size={10} />
+                Add subtasks
+              </>
+            )}
+          </span>
+          <ChevronDown
+            size={10}
+            className={`transition-transform ${expanded ? "rotate-180" : ""}`}
+          />
+        </button>
+      )}
+
+      {/* Expanded subtask list */}
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <div className="space-y-1 mb-2">
+              {subtasks.map((st) => (
+                <div
+                  key={st.id}
+                  className="flex items-center gap-1.5 group/st"
+                >
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleSubtask(task.id, st.id);
+                    }}
+                    className="shrink-0"
+                  >
+                    {st.done ? (
+                      <CheckCircle2
+                        size={13}
+                        className="text-profit"
+                      />
+                    ) : (
+                      <Circle
+                        size={13}
+                        className="text-gray-500 hover:text-gray-300"
+                      />
+                    )}
+                  </button>
+                  <span
+                    className={`text-[11px] flex-1 truncate ${
+                      st.done
+                        ? "text-gray-500 line-through"
+                        : "text-gray-300"
+                    }`}
+                  >
+                    {st.title}
+                  </span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteSubtask(task.id, st.id);
+                    }}
+                    className="opacity-0 group-hover/st:opacity-100 transition-opacity shrink-0"
+                  >
+                    <X
+                      size={10}
+                      className="text-gray-500 hover:text-loss"
+                    />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <form
+              onSubmit={handleAddSubtask}
+              className="flex gap-1 mb-2.5"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <input
+                type="text"
+                value={newSubtask}
+                onChange={(e) => setNewSubtask(e.target.value)}
+                onMouseDown={(e) => e.stopPropagation()}
+                placeholder="Add subtask..."
+                className="flex-1 text-[11px] px-2 py-1 rounded-lg bg-white/[0.03] border border-glass-border text-white placeholder-gray-600 focus:outline-none focus:border-profit/30"
+              />
+              <button
+                type="submit"
+                className="text-profit hover:text-white transition-colors shrink-0"
+              >
+                <Plus size={14} />
+              </button>
+            </form>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Footer */}
       <div className="flex items-center justify-between">

@@ -2,6 +2,70 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ===================================================================
+   THEME VARIABLES
+   =================================================================== */
+
+:root {
+  /* Surface colors (space-separated RGB for Tailwind alpha support) */
+  --surface-0: 6 10 19;
+  --surface-1: 12 17 33;
+  --surface-2: 17 24 39;
+  --surface-3: 26 34 53;
+  --surface-4: 36 48 73;
+
+  /* Glass / glassmorphism */
+  --glass-bg: rgba(255, 255, 255, 0.03);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-hover: rgba(255, 255, 255, 0.06);
+
+  /* Theme text */
+  --text-primary: #e2e8f0;
+  --text-heading: #ffffff;
+
+  /* Profit / accent colors */
+  --color-profit: 0 255 136;
+
+  /* Neumorphic (unused in dark) */
+  --neu-raised: none;
+  --neu-raised-sm: none;
+  --neu-inset: none;
+}
+
+/* ===================================================================
+   LIGHT / NEUMORPHIC THEME
+   =================================================================== */
+
+[data-theme="light"] {
+  /* Surface colors — soft warm gray from Figma neumorphic reference */
+  --surface-0: 224 229 236;
+  --surface-1: 228 233 240;
+  --surface-2: 232 236 242;
+  --surface-3: 218 223 230;
+  --surface-4: 210 215 222;
+
+  /* Glass → solid neumorphic surfaces */
+  --glass-bg: rgb(224 229 236);
+  --glass-border: rgba(0, 0, 0, 0.04);
+  --glass-hover: rgb(218 223 230);
+
+  /* Theme text */
+  --text-primary: #2d3436;
+  --text-heading: #1a1d1e;
+
+  /* Profit color — softer green matching Figma neumorphic */
+  --color-profit: 45 206 137;
+
+  /* Neumorphic shadows */
+  --neu-raised: 6px 6px 12px #b8bec7, -6px -6px 12px #ffffff;
+  --neu-raised-sm: 3px 3px 6px #b8bec7, -3px -3px 6px #ffffff;
+  --neu-inset: inset 3px 3px 6px #b8bec7, inset -3px -3px 6px #ffffff;
+}
+
+/* ===================================================================
+   BASE STYLES
+   =================================================================== */
+
 * {
   margin: 0;
   padding: 0;
@@ -15,8 +79,8 @@ html {
 }
 
 body {
-  background: #060a13;
-  color: #e2e8f0;
+  background: rgb(var(--surface-0));
+  color: var(--text-primary);
   overflow: hidden;
   height: 100vh;
 }
@@ -25,17 +89,29 @@ body {
   height: 100vh;
 }
 
-/* Glassmorphism utilities */
+@media (max-width: 767px) {
+  body,
+  #root {
+    overflow-y: auto;
+    height: 100%;
+    min-height: 100vh;
+  }
+}
+
+/* ===================================================================
+   GLASSMORPHISM (dark default)
+   =================================================================== */
+
 .glass {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--glass-bg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--glass-border);
 }
 
 .glass-hover:hover {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.1);
+  background: var(--glass-hover);
+  border-color: var(--glass-border);
 }
 
 .glass-active {
@@ -43,7 +119,154 @@ body {
   border-color: rgba(255, 255, 255, 0.12);
 }
 
-/* Glow effects */
+/* ===================================================================
+   LIGHT THEME: GLASS → NEUMORPHIC
+   =================================================================== */
+
+[data-theme="light"] .glass {
+  background: rgb(var(--surface-0));
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: none;
+  box-shadow: var(--neu-raised);
+}
+
+[data-theme="light"] .glass-hover:hover {
+  background: rgb(218 223 230);
+  border-color: transparent;
+}
+
+[data-theme="light"] .glass-active {
+  background: rgb(218 223 230);
+  border-color: transparent;
+  box-shadow: var(--neu-raised-sm) !important;
+}
+
+/* ===================================================================
+   LIGHT THEME: TEXT COLOR OVERRIDES
+   =================================================================== */
+
+[data-theme="light"] .text-white {
+  color: #1a1d1e;
+}
+[data-theme="light"] .text-white\/90 {
+  color: #2d3436;
+}
+[data-theme="light"] .text-white\/80 {
+  color: #2d3436;
+}
+[data-theme="light"] .text-white\/70 {
+  color: #3d4446;
+}
+[data-theme="light"] .text-white\/60 {
+  color: #4d5456;
+}
+[data-theme="light"] .text-gray-200 {
+  color: #3d4446;
+}
+[data-theme="light"] .text-gray-300 {
+  color: #4a5568;
+}
+[data-theme="light"] .text-gray-400 {
+  color: #636e72;
+}
+[data-theme="light"] .text-gray-500 {
+  color: #7f8c8d;
+}
+
+/* Hover text overrides */
+[data-theme="light"] .hover\:text-white:hover {
+  color: #1a1d1e;
+}
+[data-theme="light"] .hover\:text-gray-200:hover {
+  color: #2d3436;
+}
+[data-theme="light"] .hover\:text-gray-300:hover {
+  color: #2d3436;
+}
+
+/* ===================================================================
+   LIGHT THEME: BACKGROUND OPACITY OVERRIDES
+   =================================================================== */
+
+[data-theme="light"] .bg-white\/3 {
+  background: rgba(0, 0, 0, 0.02);
+}
+[data-theme="light"] .bg-white\/5 {
+  background: rgba(0, 0, 0, 0.04);
+}
+[data-theme="light"] .bg-white\/\[0\.03\] {
+  background: rgba(0, 0, 0, 0.03);
+}
+[data-theme="light"] .bg-white\/10 {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+/* Hover backgrounds */
+[data-theme="light"] .hover\:bg-white\/\[0\.03\]:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+[data-theme="light"] .hover\:bg-white\/5:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+/* ===================================================================
+   LIGHT THEME: BORDER OVERRIDES
+   =================================================================== */
+
+[data-theme="light"] .border-white\/5 {
+  border-color: rgba(0, 0, 0, 0.06);
+}
+[data-theme="light"] .border-white\/10 {
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+/* ===================================================================
+   LIGHT THEME: FORM INPUTS → NEUMORPHIC INSET
+   =================================================================== */
+
+[data-theme="light"] input:not([type="checkbox"]):not([type="radio"]),
+[data-theme="light"] select,
+[data-theme="light"] textarea {
+  background: rgb(var(--surface-0)) !important;
+  color: #2d3436 !important;
+  border-color: transparent !important;
+  box-shadow: var(--neu-inset);
+}
+
+[data-theme="light"] input::placeholder,
+[data-theme="light"] textarea::placeholder {
+  color: #95a5a6 !important;
+}
+
+[data-theme="light"] input:focus,
+[data-theme="light"] select:focus,
+[data-theme="light"] textarea:focus {
+  box-shadow: var(--neu-inset), 0 0 0 2px rgba(0, 255, 136, 0.2) !important;
+}
+
+/* ===================================================================
+   LIGHT THEME: RECHARTS / SVG CHARTS
+   =================================================================== */
+
+[data-theme="light"] .recharts-cartesian-grid line {
+  stroke: rgba(0, 0, 0, 0.06) !important;
+}
+
+[data-theme="light"] .recharts-text {
+  fill: #636e72 !important;
+}
+
+[data-theme="light"] .recharts-tooltip-wrapper .glass {
+  background: rgb(var(--surface-0)) !important;
+  border: none !important;
+  box-shadow: var(--neu-raised) !important;
+}
+
+/* ===================================================================
+   GLOW EFFECTS
+   =================================================================== */
+
 .glow-green {
   box-shadow: 0 0 20px rgba(0, 255, 136, 0.12), 0 0 40px rgba(0, 255, 136, 0.06);
 }
@@ -64,7 +287,27 @@ body {
   box-shadow: 0 0 20px rgba(168, 85, 247, 0.12), 0 0 40px rgba(168, 85, 247, 0.06);
 }
 
-/* Custom scrollbar */
+/* Light theme: neumorphic + subtle color glow */
+[data-theme="light"] .glow-green {
+  box-shadow: var(--neu-raised), 0 0 16px rgba(45, 206, 137, 0.12);
+}
+[data-theme="light"] .glow-red {
+  box-shadow: var(--neu-raised), 0 0 16px rgba(255, 68, 102, 0.1);
+}
+[data-theme="light"] .glow-blue {
+  box-shadow: var(--neu-raised), 0 0 16px rgba(59, 130, 246, 0.1);
+}
+[data-theme="light"] .glow-amber {
+  box-shadow: var(--neu-raised), 0 0 16px rgba(255, 170, 0, 0.1);
+}
+[data-theme="light"] .glow-purple {
+  box-shadow: var(--neu-raised), 0 0 16px rgba(168, 85, 247, 0.1);
+}
+
+/* ===================================================================
+   SCROLLBAR
+   =================================================================== */
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -83,6 +326,14 @@ body {
   background: rgba(255, 255, 255, 0.2);
 }
 
+[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.22);
+}
+
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
@@ -90,6 +341,10 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* ===================================================================
+   UTILITIES
+   =================================================================== */
 
 /* Ticker tape */
 .ticker-wrap {
@@ -118,6 +373,10 @@ body {
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
   pointer-events: none;
   border-radius: inherit;
+}
+
+[data-theme="light"] .noise::after {
+  opacity: 0;
 }
 
 /* Pulse animation for live dot */
@@ -155,4 +414,218 @@ body {
 
 .card-shine:hover::before {
   left: 100%;
+}
+
+[data-theme="light"] .card-shine {
+  overflow: visible;
+}
+[data-theme="light"] .card-shine::before {
+  display: none;
+}
+
+/* ===================================================================
+   LIGHT THEME: MISC OVERRIDES
+   =================================================================== */
+
+/* Ambient gradient overlay — hide in light mode */
+[data-theme="light"] .noise > .pointer-events-none:first-child {
+  opacity: 0;
+}
+
+/* Sidebar active indicator — override inline box-shadow */
+[data-theme="light"] .glass-active[style] {
+  box-shadow: var(--neu-raised-sm) !important;
+}
+
+/* Keep white text on colored backgrounds (both descendant AND same-element) */
+[data-theme="light"] [class*="bg-loss"] .text-white,
+[data-theme="light"] [class*="bg-gradient"] .text-white,
+[data-theme="light"] [class*="bg-profit"] .text-white,
+[data-theme="light"] [class*="bg-loss"].text-white,
+[data-theme="light"] [class*="bg-gradient"].text-white,
+[data-theme="light"] [class*="bg-profit"].text-white,
+[data-theme="light"] [class*="bg-accent-blue"].text-white,
+[data-theme="light"] [class*="bg-accent-purple"].text-white {
+  color: #ffffff !important;
+}
+
+/* Task cards (rounded-xl) — raised neumorphic with balanced shadow */
+[data-theme="light"] .glass.rounded-xl {
+  box-shadow: 3px 3px 6px #b8bec7, -3px -3px 6px #ffffff;
+  border: none !important;
+}
+
+/* Client cards — deeper neumorphic 3D */
+[data-theme="light"] .client-card.glass {
+  box-shadow: 6px 6px 12px #b8bec7, -6px -6px 12px #ffffff !important;
+  border: none !important;
+  background: rgb(var(--surface-0)) !important;
+  overflow: visible !important;
+}
+[data-theme="light"] .client-card.card-shine::before {
+  display: none;
+}
+
+/* Metric card icon — neumorphic raised circle */
+[data-theme="light"] .metric-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: rgb(224 229 236);
+  box-shadow: 2px 2px 4px #b8bec7, -2px -2px 4px #ffffff;
+}
+
+/* Priority badges — neumorphic raised pills */
+[data-theme="light"] .rounded-full.border {
+  background: rgb(224 229 236) !important;
+  border: none !important;
+  box-shadow: 2px 2px 4px #b8bec7, -2px -2px 4px #ffffff;
+  color: #636e72 !important;
+}
+
+/* Metric cards — raised neumorphic, overflow visible so shadow isn't clipped */
+[data-theme="light"] .metric-card.glass {
+  box-shadow: 6px 6px 12px #b8bec7, -6px -6px 12px #ffffff !important;
+  border: none !important;
+  background: rgb(var(--surface-0)) !important;
+  overflow: visible !important;
+}
+[data-theme="light"] .metric-card.card-shine::before {
+  display: none;
+}
+
+/* Gradient text — use softer green in light mode */
+[data-theme="light"] .gradient-text {
+  background: linear-gradient(135deg, #2dce89, #06b6d4);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Focus ring — softer green in light mode */
+[data-theme="light"] input:focus,
+[data-theme="light"] select:focus,
+[data-theme="light"] textarea:focus {
+  box-shadow: var(--neu-inset), 0 0 0 2px rgba(45, 206, 137, 0.25) !important;
+}
+
+/* Override inline #00ff88 in SVG charts for light mode */
+[data-theme="light"] .recharts-layer path[stroke="#00ff88"] {
+  stroke: #2dce89 !important;
+}
+[data-theme="light"] .recharts-active-dot circle[fill="#00ff88"] {
+  fill: #2dce89 !important;
+}
+
+/* ===================================================================
+   LIGHT THEME: BUTTONS → NEUMORPHIC
+   =================================================================== */
+
+/* Primary gradient CTA buttons → neumorphic raised with subtle tint */
+[data-theme="light"] .bg-gradient-to-r.from-profit {
+  background: rgb(var(--surface-0)) !important;
+  color: #2dce89 !important;
+  box-shadow: var(--neu-raised-sm);
+  border: none;
+}
+[data-theme="light"] .bg-gradient-to-r.from-profit:hover {
+  box-shadow: var(--neu-raised);
+}
+/* Keep text inside gradient buttons themed */
+[data-theme="light"] .bg-gradient-to-r.from-profit .text-surface-0,
+[data-theme="light"] .bg-gradient-to-r.from-profit.text-surface-0 {
+  color: #2dce89 !important;
+}
+
+/* Amber/purple gradient buttons (Goals) → neumorphic raised */
+[data-theme="light"] .bg-gradient-to-r.from-accent-amber {
+  background: rgb(var(--surface-0)) !important;
+  color: #b8862d !important;
+  box-shadow: var(--neu-raised-sm);
+}
+[data-theme="light"] .bg-gradient-to-r.from-accent-amber:hover {
+  box-shadow: var(--neu-raised);
+}
+[data-theme="light"] .bg-gradient-to-r.from-accent-amber .text-white,
+[data-theme="light"] .bg-gradient-to-r.from-accent-amber.text-white {
+  color: #b8862d !important;
+}
+
+/* Colored transparent buttons (Load Demo, Clear All) → neumorphic */
+[data-theme="light"] .bg-accent-blue\/10 {
+  background: rgb(var(--surface-0)) !important;
+  border-color: transparent !important;
+  box-shadow: var(--neu-raised-sm);
+}
+[data-theme="light"] .bg-accent-blue\/10:hover {
+  box-shadow: var(--neu-raised);
+}
+[data-theme="light"] .bg-loss\/10 {
+  background: rgb(var(--surface-0)) !important;
+  border-color: transparent !important;
+  box-shadow: var(--neu-raised-sm);
+}
+[data-theme="light"] .bg-loss\/10:hover {
+  box-shadow: var(--neu-raised);
+}
+
+/* Glass-hover border buttons (Export/Import) → neumorphic */
+[data-theme="light"] .glass-hover.border {
+  border-color: transparent !important;
+  box-shadow: var(--neu-raised-sm);
+}
+[data-theme="light"] .glass-hover.border:hover {
+  box-shadow: var(--neu-raised);
+  background: rgb(var(--surface-0));
+}
+
+/* Icon buttons (header, nav) → subtle neumorphic */
+[data-theme="light"] button.rounded-xl.glass-hover {
+  box-shadow: var(--neu-raised-sm);
+}
+[data-theme="light"] button.rounded-xl.glass-hover:hover {
+  box-shadow: var(--neu-raised);
+  background: rgb(var(--surface-0));
+}
+
+/* Dashed border buttons → neumorphic inset */
+[data-theme="light"] .border-dashed {
+  border-style: solid !important;
+  border-color: transparent !important;
+  box-shadow: var(--neu-inset);
+}
+
+/* ===================================================================
+   LIGHT THEME: REMOVE COLORED ORBS / GLOWS FROM CARDS
+   =================================================================== */
+
+/* Hide colored blur orbs inside glass panels */
+[data-theme="light"] .glass .blur-2xl,
+[data-theme="light"] .glass .blur-\[80px\] {
+  opacity: 0 !important;
+}
+
+/* Remove inline colored box-shadows on glass panels */
+[data-theme="light"] .glass.card-shine[style],
+[data-theme="light"] .glass[style*="box-shadow: 0 0"] {
+  box-shadow: var(--neu-raised) !important;
+}
+
+/* Progress bar gradient backgrounds in light mode */
+[data-theme="light"] .bg-gradient-to-r.from-profit.to-accent-cyan:not(button) {
+  background: linear-gradient(90deg, #2dce89, #06b6d4) !important;
+}
+
+/* ===================================================================
+   LIGHT THEME: DROPDOWN MENUS
+   =================================================================== */
+
+/* Override hardcoded dark dropdown backgrounds */
+[data-theme="light"] .z-50[style*="rgba(13,18,30"] {
+  background: rgb(224, 229, 236) !important;
+  backdrop-filter: none !important;
+  box-shadow: var(--neu-raised) !important;
 }

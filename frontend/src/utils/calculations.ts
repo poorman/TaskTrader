@@ -1,4 +1,5 @@
 import type { Task, DailySnapshot } from "../types";
+import { toLocalDate } from "./timezone";
 
 export function calculatePnL(
   estimatedHours: number,
@@ -36,12 +37,8 @@ export function calculateRealizedPnL(tasks: Task[]): number {
 
 export function calculateOpenProfit(tasks: Task[]): number {
   return tasks
-    .filter((t) => t.status === "in_progress" || t.status === "waiting")
-    .reduce((sum, t) => {
-      const projected =
-        t.estimatedHours * t.hourlyRate - t.actualHours * t.hourlyRate;
-      return sum + projected;
-    }, 0);
+    .filter((t) => t.status === "in_progress" || t.status === "waiting" || t.status === "lead")
+    .reduce((sum, t) => sum + t.revenue, 0);
 }
 
 export function calculateLostRevenue(tasks: Task[]): number {
@@ -73,7 +70,7 @@ export function buildDailySnapshots(tasks: Task[]): DailySnapshot[] {
       (t.status === "completed" || t.status === "lost") && t.completedAt
   );
   closed.forEach((t) => {
-    const date = t.completedAt!.slice(0, 10);
+    const date = toLocalDate(t.completedAt!);
     if (!map[date]) {
       map[date] = {
         date,

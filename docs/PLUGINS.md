@@ -2,71 +2,78 @@
 
 ## Plugin Architecture
 
-TaskTrader Pro is designed with a modular component structure that supports future plugin capabilities. Phase 1 does not include a runtime plugin system, but the architecture anticipates these extension points.
+TaskTrader Pro supports a folder-based plugin system. Plugins live in `frontend/src/plugins/<plugin-name>/` with their own stores, types, and components. Core app touch points are clearly marked with `// PLUGIN: <name>` comments for easy removal.
 
-## Extension Points
+## Active Plugins
 
-### 1. Project Type Plugins
+### Baby Diary (`plugins/baby-diary/`)
 
-New project types beyond the built-in `web_design`, `printing`, `branding`, `other`:
+A daily diary for documenting baby care activities (feedings, diaper changes, playtime, sleep, baths). Designed for custody documentation with timestamps.
 
-- **Photography**: shoot scheduling, editing time, print fulfillment
-- **Video Production**: pre-production, shooting, editing, rendering phases
-- **Social Media**: content calendar, post scheduling, engagement tracking
-- **Signage**: design, production, installation tracking
+**Files:**
+```
+frontend/src/plugins/baby-diary/
+├── BabyDiaryPage.tsx      # Full page with date navigator, quick-add, timeline, daily summary
+├── BabyDiaryButton.tsx    # Header icon button (Baby icon) with today's entry count badge
+├── babyDiaryStore.ts      # Separate zustand store (localStorage key: "tasktrader-plugin-babydiary")
+└── types.ts               # DiaryEntry type and entry type definitions
+```
 
-Each project type can define:
-- Custom fields (e.g., print dimensions, paper stock for printing jobs)
-- Default estimated hours templates
-- Type-specific analytics views
+**Core app touch points (3 total, all marked with `// PLUGIN: baby-diary`):**
+1. `types/index.ts` — `"babydiary"` in Page union type
+2. `App.tsx` — import + route entry
+3. `Header.tsx` — import + render BabyDiaryButton
 
-### 2. Chart Plugins
-
-Additional analytics visualizations:
-
-- **Burndown Chart**: sprint-style remaining work visualization
-- **Velocity Chart**: throughput trend over sprints/weeks
-- **Client Radar**: multi-axis comparison of clients (volume, profitability, payment speed)
-- **Forecast Chart**: projected revenue based on pipeline
-
-### 3. Export Plugins
-
-Additional export formats beyond JSON:
-
-- **CSV Export**: for spreadsheet analysis
-- **PDF Report**: formatted client-facing reports
-- **Invoice Generator**: auto-create invoices from completed tasks
-- **Timesheet Export**: formatted for payroll systems
-
-### 4. Integration Plugins (Phase 5)
-
-External service connectors:
-
-- **Google Calendar**: sync task deadlines as calendar events
-- **Slack**: post task updates to channels
-- **QuickBooks**: push completed tasks as billable items
-- **GitHub/GitLab**: link tasks to code repositories
-
-## Custom Fields System (Future)
-
+**Data model:**
 ```typescript
-interface CustomFieldDef {
+interface DiaryEntry {
   id: string;
-  name: string;
-  type: "text" | "number" | "select" | "date" | "boolean";
-  options?: string[];       // for select type
-  project_types?: string[]; // which project types show this field
-  required?: boolean;
+  date: string;          // "YYYY-MM-DD" in Chicago timezone
+  time: string;          // "HH:MM"
+  type: "diaper" | "feeding" | "playtime" | "sleep" | "bath" | "other";
+  notes: string;
+  duration?: number;     // minutes
+  createdAt: string;
 }
 ```
 
-Custom fields would be stored in a `custom_fields` map on the Task type and rendered dynamically in task forms and detail views.
+**Removal instructions:**
+1. Delete `frontend/src/plugins/baby-diary/` folder
+2. Search for `// PLUGIN: baby-diary` and remove those lines (3 files)
+3. Remove `"babydiary"` from `Page` type in `types/index.ts`
+4. Done — zero leftover code or data
 
-## Theme Plugins (Future)
+## Extension Points (Future)
 
-While the default theme is dark trading-terminal style, the architecture supports theme swapping:
+### Project Type Plugins
+New project types beyond the built-in categories:
+- Photography, Video Production, Social Media, Signage
+- Each can define custom fields and default templates
 
-- **Light Mode**: for daytime/presentation use
-- **Bloomberg**: classic Bloomberg Terminal green-on-black
-- **Minimal**: clean white with subtle borders
-- **Custom**: user-defined color palette
+### Chart Plugins
+Additional analytics visualizations:
+- Burndown Chart, Velocity Chart, Client Radar, Forecast Chart
+
+### Export Plugins
+Additional export formats beyond JSON:
+- CSV Export, PDF Report, Invoice Generator, Timesheet Export
+
+### Integration Plugins
+External service connectors:
+- Google Calendar, Slack, QuickBooks, GitHub/GitLab
+
+## Theme System
+
+TaskTrader supports dark and light themes:
+- **Dark**: Bloomberg Terminal / TradingView aesthetic
+- **Light**: Neumorphic raised/inset shadow design
+- Themes controlled via `data-theme` attribute and CSS custom properties
+- Toggle available in Settings page and header
+
+## Creating a New Plugin
+
+1. Create folder: `frontend/src/plugins/<plugin-name>/`
+2. Add own zustand store with unique localStorage key: `"tasktrader-plugin-<name>"`
+3. Add page component and optional header button
+4. Mark all core app touch points with `// PLUGIN: <name>` comments
+5. Document removal instructions in this file

@@ -1,6 +1,8 @@
 import { useMemo } from "react";
 import { motion } from "framer-motion";
+import { TrendingUp, DollarSign, TrendingDown, Target, Clock } from "lucide-react";
 import { useTaskStore } from "../stores/taskStore";
+import { useUIStore } from "../stores/uiStore";
 import {
   calculateRealizedPnL,
   calculateOpenProfit,
@@ -9,6 +11,7 @@ import {
   buildDailySnapshots,
   formatCurrencyFull,
 } from "../utils/calculations";
+import { toLocalDate } from "../utils/timezone";
 import EquityCurve from "../components/dashboard/EquityCurve";
 import MetricCards from "../components/dashboard/MetricCards";
 import MiniKanban from "../components/dashboard/MiniKanban";
@@ -19,6 +22,9 @@ import AnimatedNumber from "../components/shared/AnimatedNumber";
 export default function Dashboard() {
   const tasks = useTaskStore((s) => s.tasks);
   const clients = useTaskStore((s) => s.clients);
+  const theme = useUIStore((s) => s.theme);
+  const profitColor = theme === "light" ? "#2dce89" : "#00ff88";
+  const lossColor = "#ff4466";
 
   const stats = useMemo(() => {
     const realized = calculateRealizedPnL(tasks);
@@ -26,16 +32,22 @@ export default function Dashboard() {
     const lost = calculateLostRevenue(tasks);
     const winRate = calculateWinRate(tasks);
     const totalPnL = realized + open;
+    const todayStr = toLocalDate(new Date().toISOString());
     const completedToday = tasks.filter(
       (t) =>
         t.status === "completed" &&
-        t.completedAt?.startsWith(new Date().toISOString().slice(0, 10))
+        t.completedAt && toLocalDate(t.completedAt) === todayStr
     );
     const todayPnL = completedToday.reduce((s, t) => s + t.pnl, 0);
     const snapshots = buildDailySnapshots(tasks);
 
-    // Projected month close
+    // Avg hourly rate from completed tasks
     const completedAll = tasks.filter((t) => t.status === "completed");
+    const totalHours = completedAll.reduce((s, t) => s + (t.actualHours || 0), 0);
+    const totalRevenue = completedAll.reduce((s, t) => s + t.revenue, 0);
+    const avgHourlyRate = totalHours > 0 ? totalRevenue / totalHours : 0;
+
+    // Projected month close
     const avgDailyRevenue =
       completedAll.length > 0
         ? completedAll.reduce((s, t) => s + t.revenue, 0) / 30
@@ -59,28 +71,29 @@ export default function Dashboard() {
       todayPnL,
       snapshots,
       projected,
+      avgHourlyRate,
     };
   }, [tasks]);
 
   const metricData = [
     {
-      label: "Open Profit",
+      label: "Pipeline",
       value: stats.open,
-      color: "#00ff88",
-      icon: "📈",
+      color: profitColor,
+      icon: <TrendingUp size={14} />,
     },
     {
       label: "Realized Profit",
       value: stats.realized,
       color: "#3b82f6",
-      icon: "💰",
+      icon: <DollarSign size={14} />,
     },
     {
       label: "Lost Revenue",
       value: stats.lost,
       prefix: "$",
       color: "#ff4466",
-      icon: "📉",
+      icon: <TrendingDown size={14} />,
     },
     {
       label: "Win Rate",
@@ -88,7 +101,15 @@ export default function Dashboard() {
       prefix: "",
       suffix: "%",
       color: "#ffaa00",
-      icon: "🎯",
+      icon: <Target size={14} />,
+    },
+    {
+      label: "Avg Hourly Rate",
+      value: stats.avgHourlyRate,
+      prefix: "$",
+      suffix: "/hr",
+      color: "#a855f7",
+      icon: <Clock size={14} />,
     },
   ];
 
@@ -109,18 +130,18 @@ export default function Dashboard() {
                 : "linear-gradient(135deg, #ff4466, #a855f7)",
           }}
         />
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">
-              Total P&L Today
+              Total Realized P&L
             </p>
             <div
-              className="text-4xl font-display font-bold"
-              style={{ color: stats.totalPnL >= 0 ? "#00ff88" : "#ff4466" }}
+              className="text-2xl sm:text-4xl font-display font-bold"
+              style={{ color: stats.realized >= 0 ? profitColor : lossColor }}
             >
               <AnimatedNumber
-                value={stats.todayPnL}
-                prefix={stats.todayPnL >= 0 ? "+$" : "-$"}
+                value={stats.realized}
+                prefix={stats.realized >= 0 ? "+$" : "-$"}
                 className=""
               />
             </div>
@@ -133,7 +154,7 @@ export default function Dashboard() {
               </span>
             </p>
             <p className="text-[11px] text-gray-400">
-              Unrealized:{" "}
+              Pipeline:{" "}
               <span className="font-mono text-accent-blue font-semibold">
                 ${stats.open.toLocaleString()}
               </span>
@@ -154,13 +175,11 @@ export default function Dashboard() {
       {/* Metric Cards */}
       <MetricCards metrics={metricData} />
 
-      {/* Bottom row: Mini Kanban + Revenue Breakdown */}
-      <div className="grid grid-cols-1 xl:grid-cols-[1fr_280px] gap-5">
-        <div className="min-w-0 overflow-hidden">
-          <MiniKanban tasks={tasks} clients={clients} />
-        </div>
-        <RevenueBreakdown tasks={tasks} />
-      </div>
+      {/* Mini Kanban (full width) */}
+      <MiniKanban tasks={tasks} clients={clients} />
+
+      {/* Revenue Breakdown */}
+      <RevenueBreakdown tasks={tasks} />
 
       {/* Ticker Tape */}
       <TickerTape tasks={tasks} clients={clients} />
@@ -180,7 +199,7 @@ export default function Dashboard() {
             </span>
           </div>
           <div className="text-xs text-gray-400">
-            Open Profit:{" "}
+            Pipeline:{" "}
             <span className="font-mono font-bold text-accent-blue">
               ${stats.open.toLocaleString()}
             </span>

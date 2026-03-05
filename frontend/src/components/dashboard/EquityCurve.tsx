@@ -9,6 +9,7 @@ import {
 } from "recharts";
 import { motion } from "framer-motion";
 import type { DailySnapshot } from "../../types";
+import { useUIStore } from "../../stores/uiStore";
 
 interface Props {
   data: DailySnapshot[];
@@ -23,13 +24,15 @@ function CustomTooltip({
 }) {
   if (!active || !payload?.length) return null;
   const d = payload[0].payload;
+  const theme = useUIStore.getState().theme;
   return (
     <div
       className="glass rounded-xl px-4 py-3 text-xs space-y-1"
-      style={{
-        background: "rgba(17,24,39,0.95)",
-        border: "1px solid rgba(255,255,255,0.1)",
-      }}
+      style={
+        theme === "dark"
+          ? { background: "rgba(17,24,39,0.95)", border: "1px solid rgba(255,255,255,0.1)" }
+          : {}
+      }
     >
       <p className="text-gray-300 font-semibold">
         {new Date(d.date).toLocaleDateString("en-US", {
@@ -51,6 +54,8 @@ function CustomTooltip({
 }
 
 export default function EquityCurve({ data }: Props) {
+  const theme = useUIStore((s) => s.theme);
+  const dotStroke = theme === "dark" ? "#060a13" : "#e0e5ec";
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -58,7 +63,7 @@ export default function EquityCurve({ data }: Props) {
       transition={{ duration: 0.5, delay: 0.2 }}
       className="glass rounded-2xl p-5"
     >
-      <div className="h-[240px] relative">
+      <div className="h-[180px] sm:h-[220px] md:h-[240px] relative">
         {data.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center text-gray-500 text-sm">
             Complete tasks to see your equity curve
@@ -78,7 +83,7 @@ export default function EquityCurve({ data }: Props) {
             </defs>
             <CartesianGrid
               strokeDasharray="3 3"
-              stroke="rgba(255,255,255,0.04)"
+              stroke={theme === "dark" ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.06)"}
               vertical={false}
             />
             <XAxis
@@ -108,7 +113,7 @@ export default function EquityCurve({ data }: Props) {
               strokeWidth={2}
               fill="url(#revGrad)"
               dot={false}
-              activeDot={{ r: 4, fill: "#ffaa00", stroke: "#060a13", strokeWidth: 2 }}
+              activeDot={{ r: 4, fill: "#ffaa00", stroke: dotStroke, strokeWidth: 2 }}
             />
             <Area
               type="monotone"
@@ -117,7 +122,7 @@ export default function EquityCurve({ data }: Props) {
               strokeWidth={2}
               fill="url(#pnlGrad)"
               dot={false}
-              activeDot={{ r: 4, fill: "#00ff88", stroke: "#060a13", strokeWidth: 2 }}
+              activeDot={{ r: 4, fill: "#00ff88", stroke: dotStroke, strokeWidth: 2 }}
             />
           </AreaChart>
         </ResponsiveContainer>

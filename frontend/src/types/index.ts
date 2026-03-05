@@ -14,6 +14,12 @@ export type TaskStatus =
 
 export type Priority = "low" | "medium" | "high" | "urgent";
 
+export interface Subtask {
+  id: string;
+  title: string;
+  done: boolean;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -35,7 +41,21 @@ export interface Task {
   order: number;
   tags?: string[];
   progress: number; // 0-100
+  pricingMode?: "hourly" | "fixed";
   bookmarked?: boolean;
+  subtasks?: Subtask[];
+}
+
+export interface Meeting {
+  id: string;
+  title: string;
+  clientId: string;
+  date: string;      // ISO date
+  time: string;      // HH:MM
+  duration: number;   // minutes
+  notes?: string;
+  type: "call" | "video" | "in_person" | "review";
+  done: boolean;
 }
 
 export interface Client {
@@ -55,7 +75,6 @@ export interface Category {
   id: string;
   name: string;
   color: string;
-  icon: string;
 }
 
 export interface Goal {
@@ -94,9 +113,12 @@ export type Page =
   | "taskboard"
   | "newtask"
   | "clients"
+  | "calendar"
   | "categories"
   | "goals"
-  | "settings";
+  | "achievements"
+  | "settings"
+  | "babydiary"; // PLUGIN: baby-diary
 
 export interface DailySnapshot {
   date: string;
