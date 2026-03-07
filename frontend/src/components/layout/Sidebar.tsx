@@ -170,30 +170,32 @@ export default function Sidebar() {
       {/* Mobile overlay sidebar */}
       <AnimatePresence>
         {mobileMenuOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/60 z-40 md:hidden"
+          <motion.div
+            key="mobile-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 z-40 md:hidden"
+            onClick={() => setMobileMenu(false)}
+          />
+        )}
+        {mobileMenuOpen && (
+          <motion.aside
+            key="mobile-sidebar"
+            initial={{ x: -280 }}
+            animate={{ x: 0 }}
+            exit={{ x: -280 }}
+            transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
+            className="fixed top-0 left-0 h-full w-[260px] z-50 md:hidden flex flex-col bg-surface-1 border-r border-glass-border"
+          >
+            <SidebarContent expanded />
+            <button
               onClick={() => setMobileMenu(false)}
-            />
-            <motion.aside
-              initial={{ x: -280 }}
-              animate={{ x: 0 }}
-              exit={{ x: -280 }}
-              transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
-              className="fixed top-0 left-0 h-full w-[260px] z-50 md:hidden flex flex-col bg-surface-1 border-r border-glass-border"
+              className="h-10 flex items-center justify-center border-t border-glass-border text-gray-500 hover:text-gray-300 transition-colors shrink-0"
             >
-              <SidebarContent expanded />
-              <button
-                onClick={() => setMobileMenu(false)}
-                className="h-10 flex items-center justify-center border-t border-glass-border text-gray-500 hover:text-gray-300 transition-colors shrink-0"
-              >
-                <X size={16} />
-              </button>
-            </motion.aside>
-          </>
+              <X size={16} />
+            </button>
+          </motion.aside>
         )}
       </AnimatePresence>
     </>
