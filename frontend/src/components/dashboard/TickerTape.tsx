@@ -38,7 +38,7 @@ export default function TickerTape({
                 <span
                   className="w-1.5 h-1.5 rounded-full shrink-0"
                   style={{
-                    background: isWin ? "#00ff88" : "#ff4466",
+                    background: isWin ? "rgb(var(--color-profit))" : "#ff4466",
                     boxShadow: `0 0 6px ${isWin ? "rgba(0,255,136,0.5)" : "rgba(255,68,102,0.5)"}`,
                   }}
                 />
@@ -48,7 +48,7 @@ export default function TickerTape({
                 <span className="text-white font-semibold">{t.title}</span>
                 <span
                   className="font-mono font-bold"
-                  style={{ color: isWin ? "#00ff88" : "#ff4466" }}
+                  style={{ color: isWin ? "rgb(var(--color-profit))" : "#ff4466" }}
                 >
                   {isWin ? "+" : ""}${t.pnl.toLocaleString()}
                 </span>

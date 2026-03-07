@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Search, Bell, User, Menu, Sun, Moon, Plus, Trophy, Settings } from "lucide-react";
+import { Search, Bell, User, Menu, Sun, Moon, Plus, Trophy, Settings, LayoutGrid, LayoutList, Baby } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useUIStore } from "../../stores/uiStore";
 import { useTaskStore } from "../../stores/taskStore";
@@ -23,13 +23,16 @@ const PAGE_TITLES: Record<Page, string> = {
 const TIME_RANGES = ["Today", "1W", "1M", "3M", "1Y"];
 
 export default function Header() {
-  const { activePage, searchQuery, setSearch, setMobileMenu, setPage, theme, toggleTheme } = useUIStore();
+  const { activePage, searchQuery, setSearch, setMobileMenu, setPage, theme, toggleTheme, timeRange, setTimeRange, compactView, toggleCompactView } = useUIStore();
   const tasks = useTaskStore((s) => s.tasks);
   const clients = useTaskStore((s) => s.clients);
   const [showResults, setShowResults] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [mobileExtras, setMobileExtras] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
+  const mobileNotifRef = useRef<HTMLDivElement>(null);
+  const touchStartX = useRef(0);
 
   const filteredTasks = searchQuery.trim().length > 0
     ? tasks.filter((t) =>
@@ -45,7 +48,10 @@ export default function Header() {
       if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
         setShowResults(false);
       }
-      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+      if (
+        notifRef.current && !notifRef.current.contains(e.target as Node) &&
+        mobileNotifRef.current && !mobileNotifRef.current.contains(e.target as Node)
+      ) {
         setShowNotifications(false);
       }
     };
@@ -69,9 +75,9 @@ export default function Header() {
   };
 
   return (
-    <header className="h-14 flex items-center justify-between px-3 sm:px-6 border-b border-glass-border shrink-0">
-      <div className="flex items-center gap-2">
-        {/* Mobile hamburger */}
+    <header className="h-14 flex items-center px-3 sm:px-6 border-b border-glass-border shrink-0">
+      {/* Left: hamburger + title */}
+      <div className="flex items-center gap-2 shrink-0">
         <button
           onClick={() => setMobileMenu(true)}
           className="md:hidden p-2 rounded-xl text-gray-400 hover:text-white transition-colors"
@@ -83,14 +89,16 @@ export default function Header() {
         </h1>
       </div>
 
-      <div className="flex items-center gap-2 sm:gap-3">
+      {/* Desktop: normal flex row */}
+      <div className="hidden sm:flex items-center gap-2 md:gap-3 ml-auto">
         {/* Time range pills */}
         <div className="hidden lg:flex items-center gap-1 glass rounded-xl px-1 py-1">
-          {TIME_RANGES.map((r, i) => (
+          {TIME_RANGES.map((r) => (
             <button
               key={r}
+              onClick={() => setTimeRange(r as typeof timeRange)}
               className={`px-3 py-1 text-xs font-medium rounded-lg transition-all ${
-                i === 0
+                timeRange === r
                   ? "bg-white/10 text-white"
                   : "text-gray-400 hover:text-white hover:bg-white/5"
               }`}
@@ -122,7 +130,6 @@ export default function Header() {
             }}
             className="w-32 sm:w-48 pl-8 pr-3 py-2 text-xs rounded-xl glass bg-transparent border border-glass-border text-white placeholder-gray-500 focus:outline-none focus:border-profit/30 transition-colors"
           />
-          {/* Search results dropdown */}
           <AnimatePresence>
             {showResults && filteredTasks.length > 0 && (
               <motion.div
@@ -147,7 +154,7 @@ export default function Header() {
                     >
                       <span
                         className="w-2 h-2 rounded-full shrink-0"
-                        style={{ background: task.status === "completed" ? "#22c55e" : task.status === "lost" ? "#ff4466" : task.status === "in_progress" ? "#00ff88" : "#ffaa00" }}
+                        style={{ background: task.status === "completed" ? "#22c55e" : task.status === "lost" ? "#ff4466" : task.status === "in_progress" ? "rgb(var(--color-profit))" : "#ffaa00" }}
                       />
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-semibold text-white truncate">{task.title}</p>
@@ -167,13 +174,24 @@ export default function Header() {
           </AnimatePresence>
         </div>
 
-        {/* New Task button */}
+        {/* New Task */}
         <button
           onClick={() => setPage("newtask")}
           className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-profit to-accent-cyan text-surface-0 text-xs font-bold transition-all hover:shadow-lg hover:shadow-profit/20"
         >
           <Plus size={14} />
           <span className="hidden sm:inline">New Task</span>
+        </button>
+
+        {/* Compact view toggle */}
+        <button
+          onClick={toggleCompactView}
+          className={`relative p-2 rounded-xl glass-hover transition-all ${
+            compactView ? "text-profit" : "text-gray-400 hover:text-white"
+          }`}
+          title={compactView ? "Switch to normal view" : "Switch to compact view"}
+        >
+          {compactView ? <LayoutList size={16} /> : <LayoutGrid size={16} />}
         </button>
 
         {/* Theme toggle */}
@@ -197,7 +215,9 @@ export default function Header() {
         </button>
 
         {/* PLUGIN: baby-diary */}
-        <BabyDiaryButton />
+        <span className="hidden md:block">
+          <BabyDiaryButton />
+        </span>
 
         {/* Notifications */}
         <div className="relative" ref={notifRef}>
@@ -270,9 +290,113 @@ export default function Header() {
         </button>
 
         {/* Avatar */}
-        <button className="w-8 h-8 rounded-full bg-gradient-to-br from-accent-purple to-accent-blue flex items-center justify-center">
+        <button className="flex w-8 h-8 rounded-full bg-gradient-to-br from-accent-purple to-accent-blue items-center justify-center shrink-0">
           <User size={14} className="text-white" />
         </button>
+      </div>
+
+      {/* Mobile: swipeable header */}
+      <div
+        className="flex sm:hidden items-center gap-1.5 ml-auto"
+        onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
+        onTouchEnd={(e) => {
+          const diff = touchStartX.current - e.changedTouches[0].clientX;
+          if (diff > 50) setMobileExtras(true);   // swipe left → show extras
+          if (diff < -50) setMobileExtras(false);  // swipe right → hide extras
+        }}
+      >
+        {/* Always visible: + and Bell */}
+        <button
+          onClick={() => setPage("newtask")}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-profit to-accent-cyan text-surface-0 text-xs font-bold"
+        >
+          <Plus size={14} />
+        </button>
+
+        <div className="relative" ref={mobileNotifRef}>
+          <button
+            onClick={() => setShowNotifications(!showNotifications)}
+            className="relative p-2 rounded-xl glass-hover text-gray-400 active:text-white transition-colors"
+          >
+            <Bell size={16} />
+            {recentTasks.length > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-loss text-[9px] font-bold flex items-center justify-center text-white">
+                {recentTasks.length}
+              </span>
+            )}
+          </button>
+          {/* Mobile notification dropdown */}
+          {showNotifications && (
+            <div className="fixed right-3 top-14 z-50 w-72 rounded-xl glass border border-glass-border overflow-hidden">
+              <div className="px-3 py-2 border-b border-glass-border">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">
+                  Recent Activity
+                </span>
+              </div>
+              {recentTasks.length > 0 ? recentTasks.map((task) => {
+                const client = clients.find((c) => c.id === task.clientId);
+                const isCompleted = task.status === "completed";
+                const isLost = task.status === "lost";
+                return (
+                  <button
+                    key={task.id}
+                    onClick={() => { setPage("taskboard"); setShowNotifications(false); }}
+                    className="w-full px-3 py-2.5 text-left hover:bg-white/5 transition-colors flex items-center gap-2"
+                  >
+                    <span
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{ background: isCompleted ? "#22c55e" : isLost ? "#ff4466" : "#2dce89" }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-white truncate">{task.title}</p>
+                      <p className="text-[10px] text-gray-500">
+                        {client?.name || "Unknown"} · {isCompleted ? "Completed" : isLost ? "Lost" : "In Progress"}
+                      </p>
+                    </div>
+                  </button>
+                );
+              }) : (
+                <div className="px-3 py-4 text-center text-[11px] text-gray-500">
+                  No recent activity
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Extra buttons — slide in from right on swipe left */}
+        {mobileExtras && (
+          <>
+            <motion.div
+              className="w-px h-5 bg-glass-border shrink-0"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.15 }}
+            />
+            {[
+              { key: "theme", onClick: toggleTheme, icon: theme === "dark" ? <Sun size={16} /> : <Moon size={16} />, active: false },
+              { key: "compact", onClick: toggleCompactView, icon: compactView ? <LayoutList size={16} /> : <LayoutGrid size={16} />, active: compactView },
+              { key: "achievements", onClick: () => setPage("achievements"), icon: <Trophy size={16} />, active: activePage === "achievements" },
+              { key: "babydiary", onClick: () => setPage("babydiary"), icon: <Baby size={16} />, active: activePage === "babydiary" },
+              { key: "settings", onClick: () => setPage("settings"), icon: <Settings size={16} />, active: activePage === "settings" },
+            ].map((btn, i) => (
+              <motion.button
+                key={btn.key}
+                onClick={btn.onClick}
+                initial={{ opacity: 0, x: 24 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.2, delay: i * 0.04 }}
+                className={`p-2 rounded-xl glass-hover transition-colors ${
+                  btn.active
+                    ? btn.key === "achievements" ? "text-accent-amber" : "text-profit"
+                    : "text-gray-400 active:text-white"
+                }`}
+              >
+                {btn.icon}
+              </motion.button>
+            ))}
+          </>
+        )}
       </div>
     </header>
   );

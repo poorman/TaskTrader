@@ -101,12 +101,16 @@ export const useGamificationStore = create<GamificationStore>()(
             });
           }
 
+          // Bump streak when daily target is hit for the first time today
+          const newStreak = newDaily === s.dailyTarget ? s.streak + 1 : s.streak;
+
           return {
             xp: newXP + bonusXP,
             level: getLevelFromXP(newXP + bonusXP).level,
             totalTasksCompleted: s.totalTasksCompleted + 1,
             dailyCompleted: newDaily,
             lastActiveDate: today,
+            streak: newStreak,
             pendingRewards: rewards,
           };
         });

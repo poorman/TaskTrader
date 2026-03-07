@@ -33,7 +33,7 @@ const upsertStmt = db.prepare(`
 
 // GET /api/state — returns full app state
 app.get("/api/state", (_req, res) => {
-  const keys = ["tasks", "clients", "categories", "goals", "meetings", "gamification"];
+  const keys = ["tasks", "clients", "categories", "goals", "meetings", "gamification", "babydiary"];
   const state = {};
   for (const key of keys) {
     const row = getStmt.get(key);
@@ -44,7 +44,7 @@ app.get("/api/state", (_req, res) => {
 
 // PUT /api/state — saves full app state (or partial)
 app.put("/api/state", (req, res) => {
-  const allowed = ["tasks", "clients", "categories", "goals", "meetings", "gamification"];
+  const allowed = ["tasks", "clients", "categories", "goals", "meetings", "gamification", "babydiary"];
   const saveMany = db.transaction((data) => {
     for (const key of allowed) {
       if (data[key] !== undefined) {
@@ -58,7 +58,7 @@ app.put("/api/state", (req, res) => {
 
 // PUT /api/state/:key — save a single key
 app.put("/api/state/:key", (req, res) => {
-  const allowed = ["tasks", "clients", "categories", "goals", "meetings", "gamification"];
+  const allowed = ["tasks", "clients", "categories", "goals", "meetings", "gamification", "babydiary"];
   if (!allowed.includes(req.params.key)) {
     return res.status(400).json({ error: "Invalid key" });
   }

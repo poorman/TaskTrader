@@ -26,7 +26,7 @@ export default function Achievements() {
   const xpPct = (levelInfo.currentXP / levelInfo.nextLevelXP) * 100;
   const dailyPct = Math.min(100, (dailyCompleted / dailyTarget) * 100);
 
-  // Theme-aware colors
+  // Theme-aware colors — must be hex for gradient/shadow concatenation
   const amber = isLight ? "#c47d0a" : "#ffaa00";
   const green = isLight ? "#2dce89" : "#00ff88";
 
@@ -37,7 +37,7 @@ export default function Achievements() {
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        <h1 className="text-2xl font-display font-bold text-white">
+        <h1 className={`text-2xl font-display font-bold ${isLight ? "text-gray-800" : "text-white"}`}>
           Achievements & Prizes
         </h1>
         <p className="text-sm text-gray-400 mt-0.5">
@@ -120,7 +120,7 @@ export default function Achievements() {
             {dailyCompleted >= dailyTarget ? "🏆" : "🎯"}
           </div>
           <div className="flex-1">
-            <h3 className="text-sm font-display font-bold text-white">
+            <h3 className={`text-sm font-display font-bold ${isLight ? "text-gray-800" : "text-white"}`}>
               {dailyCompleted >= dailyTarget
                 ? "Daily Target Complete!"
                 : "Daily Challenge: Complete 3 Tasks"}
@@ -143,7 +143,7 @@ export default function Achievements() {
                 className="h-full rounded-full"
                 style={{
                   background: dailyCompleted >= dailyTarget ? green : amber,
-                  boxShadow: isLight ? `0 0 6px ${dailyCompleted >= dailyTarget ? green : amber}60` : undefined,
+                  boxShadow: isLight ? `0 0 6px ${(dailyCompleted >= dailyTarget ? green : amber)}60` : undefined,
                 }}
                 initial={{ width: 0 }}
                 animate={{ width: `${dailyPct}%` }}
@@ -180,7 +180,15 @@ export default function Achievements() {
                   ? "hover:border-white/10"
                   : "opacity-60"
               }`}
-              style={{
+              style={isLight ? {
+                background: isUnlocked
+                  ? "linear-gradient(145deg, #e8edf4, #dde2e9)"
+                  : "linear-gradient(145deg, #e2e7ee, #d8dde4)",
+                boxShadow: isUnlocked
+                  ? `6px 6px 12px #b8bec7, -6px -6px 12px #ffffff`
+                  : `4px 4px 8px #b8bec7, -4px -4px 8px #ffffff`,
+                borderColor: "transparent",
+              } : {
                 borderColor: isUnlocked ? `${rarityColor}30` : undefined,
                 boxShadow: isUnlocked
                   ? `0 0 20px ${rarityColor}08`
@@ -188,7 +196,7 @@ export default function Achievements() {
               }}
             >
               {/* Glow */}
-              {isUnlocked && (
+              {isUnlocked && !isLight && (
                 <div
                   className="absolute -top-10 -right-10 w-24 h-24 rounded-full blur-2xl opacity-10 pointer-events-none"
                   style={{ background: rarityColor }}
@@ -198,7 +206,12 @@ export default function Achievements() {
               {/* Icon */}
               <div
                 className="w-12 h-12 rounded-xl flex items-center justify-center text-xl shrink-0 relative"
-                style={{
+                style={isLight ? {
+                  background: "linear-gradient(145deg, #e8edf4, #d4d9e0)",
+                  boxShadow: isUnlocked
+                    ? `3px 3px 6px #b8bec7, -3px -3px 6px #ffffff`
+                    : `inset 2px 2px 4px #b8bec7, inset -2px -2px 4px #ffffff`,
+                } : {
                   background: isUnlocked
                     ? `${rarityColor}15`
                     : "rgba(255,255,255,0.03)",
@@ -209,6 +222,23 @@ export default function Achievements() {
                 ) : (
                   <Lock size={18} className="text-gray-600" />
                 )}
+                {/* Green checkmark overlay for unlocked */}
+                {isUnlocked && (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.2 + i * 0.05, type: "spring", stiffness: 400, damping: 15 }}
+                    className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center"
+                    style={{
+                      background: green,
+                      boxShadow: isLight
+                        ? `2px 2px 4px #b8bec7, 0 0 6px ${green}40`
+                        : `0 0 8px ${green}40`,
+                    }}
+                  >
+                    <CheckCircle2 size={12} className="text-white" strokeWidth={3} />
+                  </motion.div>
+                )}
               </div>
 
               {/* Info */}
@@ -216,7 +246,7 @@ export default function Achievements() {
                 <div className="flex items-center gap-2 mb-0.5">
                   <h4
                     className="text-sm font-display font-bold truncate"
-                    style={{ color: isUnlocked ? "white" : "#6b7280" }}
+                    style={{ color: isUnlocked ? (isLight ? "#1f2937" : "white") : "#6b7280" }}
                   >
                     {a.title}
                   </h4>
@@ -306,7 +336,7 @@ function StatCard({
       <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 block mb-1">
         {label}
       </span>
-      <p className="text-xl font-display font-bold text-white">{value}</p>
+      <p className={`text-xl font-display font-bold ${isLight ? "text-gray-800" : "text-white"}`}>{value}</p>
       <p className="text-[10px] text-gray-500 mt-0.5">{sub}</p>
       {progress > 0 && (
         <div

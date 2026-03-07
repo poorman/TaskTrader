@@ -70,7 +70,7 @@ export default function Categories() {
         <AnimatePresence mode="popLayout">
           {categories.map((cat, i) => {
             const count = tasks.filter(
-              (t) => t.projectType === cat.id || t.projectType === cat.name.toLowerCase().replace(" ", "_")
+              (t) => t.projectType === cat.id || t.projectType === cat.name.toLowerCase().replace(/ /g, "_")
             ).length;
             return (
               <motion.div

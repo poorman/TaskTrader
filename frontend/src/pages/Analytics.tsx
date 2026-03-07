@@ -38,6 +38,7 @@ export default function Analytics() {
   const theme = useUIStore((s) => s.theme);
   const tooltipStyle = theme === "dark" ? TOOLTIP_DARK : TOOLTIP_LIGHT;
   const gridStroke = theme === "dark" ? GRID_DARK : GRID_LIGHT;
+  const profitColor = theme === "light" ? "#2dce89" : "#00ff88";
 
   const stats = useMemo(() => {
     const completed = tasks.filter((t) => t.status === "completed");
@@ -97,7 +98,7 @@ export default function Analytics() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
         {[
           { label: "Win Rate", value: stats.winRate, prefix: "", suffix: "%", color: "#ffaa00", icon: <Target size={14} /> },
-          { label: "Realized P&L", value: stats.realized, prefix: "$", suffix: "", color: "#00ff88", icon: <DollarSign size={14} /> },
+          { label: "Realized P&L", value: stats.realized, prefix: "$", suffix: "", color: "rgb(var(--color-profit))", icon: <DollarSign size={14} /> },
           { label: "Total Trades", value: stats.totalCompleted, prefix: "", suffix: "", color: "#3b82f6", icon: <BarChart3 size={14} /> },
           { label: "Avg Duration", value: stats.avgDuration, prefix: "", suffix: "d", color: "#a855f7", icon: <Clock size={14} /> },
         ].map((m, i) => (
@@ -175,7 +176,7 @@ export default function Analytics() {
                 <Tooltip contentStyle={tooltipStyle} />
                 <Bar dataKey="pnl" radius={[0, 6, 6, 0]}>
                   {stats.clientPnL.map((entry, i) => (
-                    <Cell key={i} fill={entry.pnl >= 0 ? "#00ff88" : "#ff4466"} fillOpacity={0.7} />
+                    <Cell key={i} fill={entry.pnl >= 0 ? profitColor : "#ff4466"} fillOpacity={0.7} />
                   ))}
                 </Bar>
               </BarChart>
@@ -213,7 +214,7 @@ export default function Analytics() {
                       dataKey="value"
                       strokeWidth={0}
                     >
-                      <Cell fill="#00ff88" />
+                      <Cell fill={profitColor} />
                       <Cell fill="#ff4466" />
                     </Pie>
                     <Tooltip contentStyle={tooltipStyle} />

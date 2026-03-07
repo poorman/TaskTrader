@@ -1,18 +1,34 @@
-import { motion } from "framer-motion";
-import { Download, Upload, Trash2, RotateCcw } from "lucide-react";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Download, Upload, Trash2, RotateCcw, Plus, Edit3, Check, X } from "lucide-react";
 import { useTaskStore } from "../stores/taskStore";
 import { useGamificationStore } from "../stores/gamificationStore";
 import { SEED_TASKS, SEED_CLIENTS } from "../utils/seedData";
 import { getLevelFromXP, ACHIEVEMENTS } from "../utils/gamification";
-import { RARITY_COLORS } from "../utils/gamification";
 import { api } from "../utils/api";
 
 export default function Settings() {
   const tasks = useTaskStore((s) => s.tasks);
   const clients = useTaskStore((s) => s.clients);
+  const categories = useTaskStore((s) => s.categories);
+  const addCategory = useTaskStore((s) => s.addCategory);
+  const updateCategory = useTaskStore((s) => s.updateCategory);
+  const deleteCategory = useTaskStore((s) => s.deleteCategory);
   const seed = useTaskStore((s) => s.seed);
   const gamification = useGamificationStore();
   const levelInfo = getLevelFromXP(gamification.xp);
+
+  const [catName, setCatName] = useState("");
+  const [catColor, setCatColor] = useState("#3b82f6");
+  const [editCatId, setEditCatId] = useState<string | null>(null);
+  const [editCatName, setEditCatName] = useState("");
+  const [editCatColor, setEditCatColor] = useState("");
+
+  const handleAddCategory = () => {
+    if (!catName.trim()) return;
+    addCategory({ name: catName.trim(), color: catColor });
+    setCatName("");
+  };
 
   const handleExport = () => {
     const data = JSON.stringify({ tasks, clients }, null, 2);
@@ -132,26 +148,21 @@ export default function Settings() {
             return (
               <div
                 key={a.id}
-                className={`glass rounded-xl p-3 flex items-center gap-2 ${
-                  unlocked ? "" : "opacity-40"
-                }`}
-                style={
-                  unlocked
-                    ? {
-                        borderColor: RARITY_COLORS[a.rarity] + "30",
-                        boxShadow: `0 0 12px ${RARITY_COLORS[a.rarity]}10`,
-                      }
-                    : {}
-                }
+                className="glass rounded-xl p-3 flex items-center gap-2"
               >
-                <span className="text-xl">{a.icon}</span>
+                <div className="relative shrink-0">
+                  <span className="text-xl">{a.icon}</span>
+                  {unlocked && (
+                    <span
+                      className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-white"
+                      style={{ background: "#2dce89", boxShadow: "0 0 6px #2dce8960" }}
+                    >
+                      ✓
+                    </span>
+                  )}
+                </div>
                 <div>
-                  <p
-                    className="text-[11px] font-bold"
-                    style={{
-                      color: unlocked ? RARITY_COLORS[a.rarity] : "#64748b",
-                    }}
-                  >
+                  <p className="text-[11px] font-bold text-gray-700">
                     {a.title}
                   </p>
                   <p className="text-[9px] text-gray-500">{a.description}</p>
@@ -159,6 +170,142 @@ export default function Settings() {
               </div>
             );
           })}
+        </div>
+      </motion.div>
+
+      {/* Categories */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+        className="glass rounded-2xl p-6"
+      >
+        <h2 className="font-display font-semibold text-sm mb-4">
+          Categories
+        </h2>
+        {/* Add form */}
+        <div className="flex items-end gap-3 mb-4">
+          <div className="flex-1">
+            <input
+              type="text"
+              value={catName}
+              onChange={(e) => setCatName(e.target.value)}
+              placeholder="New category name"
+              className="w-full px-3 py-2 rounded-lg bg-white/[0.03] border border-glass-border text-white text-sm focus:outline-none focus:border-profit/30"
+              onKeyDown={(e) => e.key === "Enter" && handleAddCategory()}
+            />
+          </div>
+          <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border-2 border-glass-border cursor-pointer" style={{ background: catColor }}>
+            <input
+              type="color"
+              value={catColor}
+              onChange={(e) => setCatColor(e.target.value)}
+              className="w-14 h-14 -ml-2 -mt-2 cursor-pointer opacity-0"
+            />
+          </div>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleAddCategory}
+            className="p-2.5 rounded-xl bg-profit/20 text-profit hover:bg-profit/30 transition-colors shrink-0"
+          >
+            <Plus size={16} />
+          </motion.button>
+        </div>
+        {/* List */}
+        <div className="space-y-2">
+          <AnimatePresence mode="popLayout">
+            {categories.map((cat) => {
+              const count = tasks.filter(
+                (t) => t.projectType === cat.id || t.projectType === cat.name.toLowerCase().replace(/ /g, "_")
+              ).length;
+              return (
+                <motion.div
+                  key={cat.id}
+                  layout
+                  initial={{ opacity: 0, x: -12 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 12 }}
+                  className="glass rounded-xl p-3 flex items-center justify-between group"
+                >
+                  {editCatId === cat.id ? (
+                    <div className="flex items-center gap-2 flex-1">
+                      <div className="w-7 h-7 rounded-full overflow-hidden shrink-0 border-2 border-glass-border cursor-pointer" style={{ background: editCatColor }}>
+                        <input
+                          type="color"
+                          value={editCatColor}
+                          onChange={(e) => setEditCatColor(e.target.value)}
+                          className="w-10 h-10 -ml-1.5 -mt-1.5 cursor-pointer opacity-0"
+                        />
+                      </div>
+                      <input
+                        type="text"
+                        value={editCatName}
+                        onChange={(e) => setEditCatName(e.target.value)}
+                        className="flex-1 px-2 py-1 rounded-lg bg-white/[0.03] border border-glass-border text-white text-sm focus:outline-none focus:border-profit/30"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            if (editCatName.trim()) updateCategory(cat.id, { name: editCatName.trim(), color: editCatColor });
+                            setEditCatId(null);
+                          }
+                          if (e.key === "Escape") setEditCatId(null);
+                        }}
+                      />
+                      <button
+                        onClick={() => {
+                          if (editCatName.trim()) updateCategory(cat.id, { name: editCatName.trim(), color: editCatColor });
+                          setEditCatId(null);
+                        }}
+                        className="p-1.5 rounded-lg bg-profit/20 text-profit hover:bg-profit/30 transition-colors"
+                      >
+                        <Check size={12} />
+                      </button>
+                      <button
+                        onClick={() => setEditCatId(null)}
+                        className="p-1.5 rounded-lg bg-white/5 text-gray-400 hover:text-white transition-colors"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-3 h-3 rounded-full shrink-0"
+                          style={{ background: cat.color }}
+                        />
+                        <div>
+                          <span className="text-sm font-semibold text-white">{cat.name}</span>
+                          <span className="text-[10px] text-gray-500 ml-2">
+                            {count} task{count !== 1 ? "s" : ""}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => {
+                            setEditCatId(cat.id);
+                            setEditCatName(cat.name);
+                            setEditCatColor(cat.color);
+                          }}
+                          className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition-all"
+                        >
+                          <Edit3 size={12} />
+                        </button>
+                        <button
+                          onClick={() => deleteCategory(cat.id)}
+                          className="p-1.5 rounded-lg hover:bg-loss/10 text-gray-500 hover:text-loss transition-all"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
         </div>
       </motion.div>
 

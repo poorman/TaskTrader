@@ -1,9 +1,11 @@
 import { api } from "./api";
 import { useTaskStore } from "../stores/taskStore";
 import { useGamificationStore } from "../stores/gamificationStore";
+import { useBabyDiaryStore } from "../plugins/baby-diary/babyDiaryStore";
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 let gamSaveTimer: ReturnType<typeof setTimeout> | null = null;
+let babySaveTimer: ReturnType<typeof setTimeout> | null = null;
 let initialized = false;
 
 /** Debounced save of task store data to backend */
@@ -37,6 +39,16 @@ function debounceSaveGamification() {
       dailyCompleted: g.dailyCompleted,
       dailyTarget: g.dailyTarget,
     }).catch((err) => console.warn("Gamification sync failed:", err));
+  }, 500);
+}
+
+/** Debounced save of baby diary data to backend */
+function debounceSaveBabyDiary() {
+  if (babySaveTimer) clearTimeout(babySaveTimer);
+  babySaveTimer = setTimeout(() => {
+    const b = useBabyDiaryStore.getState();
+    api.saveKey("babydiary", b.entries)
+      .catch((err) => console.warn("Baby diary sync failed:", err));
   }, 500);
 }
 
@@ -98,9 +110,18 @@ export async function initSync(): Promise<boolean> {
       });
     }
 
+    // Hydrate baby diary store if backend has data
+    const babyStore = useBabyDiaryStore.getState();
+    if (state.babydiary && Array.isArray(state.babydiary) && state.babydiary.length > 0) {
+      useBabyDiaryStore.setState({ entries: state.babydiary as any[] });
+    } else if (babyStore.entries.length > 0) {
+      await api.saveKey("babydiary", babyStore.entries);
+    }
+
     // Subscribe to future changes
     useTaskStore.subscribe(debounceSaveTaskData);
     useGamificationStore.subscribe(debounceSaveGamification);
+    useBabyDiaryStore.subscribe(debounceSaveBabyDiary);
 
     initialized = true;
     console.log("Backend sync initialized");

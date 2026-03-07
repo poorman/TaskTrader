@@ -35,10 +35,11 @@ function CustomTooltip({
       }
     >
       <p className="text-gray-300 font-semibold">
-        {new Date(d.date).toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-        })}
+        {(() => {
+          const [, m, day] = d.date.split("-").map(Number);
+          const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+          return `${months[m - 1]} ${day}`;
+        })()}
       </p>
       <p className="text-profit font-mono">
         {d.tasksCompleted} Tasks Completed: $
@@ -56,12 +57,13 @@ function CustomTooltip({
 export default function EquityCurve({ data }: Props) {
   const theme = useUIStore((s) => s.theme);
   const dotStroke = theme === "dark" ? "#060a13" : "#e0e5ec";
+  const profitColor = theme === "light" ? "#2dce89" : "#00ff88";
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.2 }}
-      className="glass rounded-2xl p-5"
+      className="glass rounded-2xl p-3 sm:p-5"
     >
       <div className="h-[180px] sm:h-[220px] md:h-[240px] relative">
         {data.length === 0 && (
@@ -73,8 +75,8 @@ export default function EquityCurve({ data }: Props) {
           <AreaChart data={data}>
             <defs>
               <linearGradient id="pnlGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#00ff88" stopOpacity={0.3} />
-                <stop offset="100%" stopColor="#00ff88" stopOpacity={0} />
+                <stop offset="0%" stopColor={profitColor} stopOpacity={0.3} />
+                <stop offset="100%" stopColor={profitColor} stopOpacity={0} />
               </linearGradient>
               <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#ffaa00" stopOpacity={0.2} />
@@ -89,21 +91,23 @@ export default function EquityCurve({ data }: Props) {
             <XAxis
               dataKey="date"
               tick={{ fill: "#64748b", fontSize: 10, fontFamily: "Manrope" }}
-              tickFormatter={(v: string) =>
-                new Date(v).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                })
-              }
+              tickFormatter={(v: string) => {
+                // v is "YYYY-MM-DD" in local time — parse parts directly to avoid timezone shift
+                const [, m, d] = v.split("-").map(Number);
+                const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+                return `${months[m - 1]} ${d}`;
+              }}
               axisLine={false}
               tickLine={false}
             />
             <YAxis
               tick={{ fill: "#64748b", fontSize: 10, fontFamily: "Fira Code" }}
-              tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`}
+              tickFormatter={(v: number) =>
+                v >= 1000 ? `$${(v / 1000).toFixed(v >= 10000 ? 0 : 1)}k` : `$${v}`
+              }
               axisLine={false}
               tickLine={false}
-              width={50}
+              width={45}
             />
             <Tooltip content={<CustomTooltip />} />
             <Area
@@ -118,11 +122,11 @@ export default function EquityCurve({ data }: Props) {
             <Area
               type="monotone"
               dataKey="pnl"
-              stroke="#00ff88"
+              stroke={profitColor}
               strokeWidth={2}
               fill="url(#pnlGrad)"
               dot={false}
-              activeDot={{ r: 4, fill: "#00ff88", stroke: dotStroke, strokeWidth: 2 }}
+              activeDot={{ r: 4, fill: profitColor, stroke: dotStroke, strokeWidth: 2 }}
             />
           </AreaChart>
         </ResponsiveContainer>

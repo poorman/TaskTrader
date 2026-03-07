@@ -16,6 +16,7 @@ export interface AppState {
   goals: unknown[] | null;
   meetings: unknown[] | null;
   gamification: unknown | null;
+  babydiary: unknown[] | null;
 }
 
 export const api = {

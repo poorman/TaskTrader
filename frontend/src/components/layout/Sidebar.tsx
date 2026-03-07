@@ -1,4 +1,4 @@
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   LayoutDashboard,
   BarChart3,
@@ -6,6 +6,7 @@ import {
   Users,
   CalendarDays,
   Target,
+  Settings,
   ChevronLeft,
   ChevronRight,
   Zap,
@@ -24,6 +25,7 @@ const NAV_ITEMS: { page: Page; icon: typeof LayoutDashboard; label: string }[] =
     { page: "clients", icon: Users, label: "Clients" },
     { page: "calendar", icon: CalendarDays, label: "Calendar" },
     { page: "goals", icon: Target, label: "Goals" },
+    { page: "settings", icon: Settings, label: "Settings" },
   ];
 
 function SidebarContent({ expanded }: { expanded: boolean }) {
@@ -128,7 +130,7 @@ function SidebarContent({ expanded }: { expanded: boolean }) {
               <div className="flex items-center gap-1 text-gray-400">
                 <span>🎯</span>
                 <span className="font-semibold"
-                  style={{ color: dailyCompleted >= dailyTarget ? "#00ff88" : undefined }}
+                  style={{ color: dailyCompleted >= dailyTarget ? "rgb(var(--color-profit))" : undefined }}
                 >
                   {dailyCompleted}/{dailyTarget} today
                 </span>
@@ -167,26 +169,19 @@ export default function Sidebar() {
         </button>
       </motion.aside>
 
-      {/* Mobile overlay sidebar */}
-      <AnimatePresence>
-        {mobileMenuOpen && (
-          <motion.div
-            key="mobile-overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 z-40 md:hidden"
+      {/* Mobile overlay sidebar — no AnimatePresence to avoid stale DOM on Android */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 z-40 md:hidden"
+          style={{ touchAction: "none" }}
+        >
+          <div
+            className="absolute inset-0 bg-black/60"
             onClick={() => setMobileMenu(false)}
           />
-        )}
-        {mobileMenuOpen && (
-          <motion.aside
-            key="mobile-sidebar"
-            initial={{ x: -280 }}
-            animate={{ x: 0 }}
-            exit={{ x: -280 }}
-            transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
-            className="fixed top-0 left-0 h-full w-[260px] z-50 md:hidden flex flex-col bg-surface-1 border-r border-glass-border"
+          <aside
+            className="absolute top-0 left-0 h-full w-[260px] z-10 flex flex-col bg-surface-1 border-r border-glass-border"
+            style={{ touchAction: "auto" }}
           >
             <SidebarContent expanded />
             <button
@@ -195,9 +190,9 @@ export default function Sidebar() {
             >
               <X size={16} />
             </button>
-          </motion.aside>
-        )}
-      </AnimatePresence>
+          </aside>
+        </div>
+      )}
     </>
   );
 }

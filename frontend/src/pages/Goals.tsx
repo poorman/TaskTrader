@@ -1,18 +1,27 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Target, Trash2 } from "lucide-react";
+import { Plus, Target, Trash2, Edit3, Check, X } from "lucide-react";
 import { useTaskStore } from "../stores/taskStore";
+import { useUIStore } from "../stores/uiStore";
 
 export default function Goals() {
   const goals = useTaskStore((s) => s.goals);
   const tasks = useTaskStore((s) => s.tasks);
   const addGoal = useTaskStore((s) => s.addGoal);
+  const updateGoal = useTaskStore((s) => s.updateGoal);
   const deleteGoal = useTaskStore((s) => s.deleteGoal);
 
   const [title, setTitle] = useState("");
   const [target, setTarget] = useState(5000);
   const [deadline, setDeadline] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editTarget, setEditTarget] = useState(0);
+  const [editDeadline, setEditDeadline] = useState("");
+  const theme = useUIStore((s) => s.theme);
+  const isLight = theme === "light";
+  const profitHex = isLight ? "#2dce89" : "#00ff88";
 
   const totalRevenue = tasks
     .filter((t) => t.status === "completed")
@@ -27,19 +36,32 @@ export default function Goals() {
     setShowForm(false);
   };
 
+  const handleStartEdit = (g: typeof goals[0]) => {
+    setEditingId(g.id);
+    setEditTitle(g.title);
+    setEditTarget(g.targetRevenue);
+    setEditDeadline(g.deadline);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingId || !editTitle.trim()) return;
+    updateGoal(editingId, { title: editTitle.trim(), targetRevenue: editTarget, deadline: editDeadline });
+    setEditingId(null);
+  };
+
   return (
     <div className="max-w-2xl mx-auto space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="font-display text-lg font-semibold flex items-center gap-2">
-          <Target size={18} className="text-accent-amber" />
+          <Target size={18} className="text-profit" />
           Revenue Goals
         </h2>
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-accent-amber to-accent-purple text-white font-semibold text-xs"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-profit to-accent-cyan text-surface-0 font-semibold text-xs"
         >
           <Plus size={14} />
           New Goal
@@ -74,7 +96,7 @@ export default function Goals() {
                 </div>
               </div>
               <motion.button whileTap={{ scale: 0.98 }} onClick={handleAdd}
-                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-accent-amber to-accent-purple text-white font-semibold text-sm">
+                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-profit to-accent-cyan text-surface-0 font-semibold text-sm">
                 Set Goal
               </motion.button>
             </div>
@@ -97,11 +119,7 @@ export default function Goals() {
               )
             );
             const isComplete = pct >= 100;
-            const color = isComplete
-              ? "#00ff88"
-              : pct >= 70
-                ? "#ffaa00"
-                : "#3b82f6";
+            const color = profitHex;
 
             return (
               <motion.div
@@ -118,42 +136,109 @@ export default function Goals() {
                     : undefined,
                 }}
               >
-                <button
-                  onClick={() => deleteGoal(g.id)}
-                  className="absolute top-3 right-3 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-loss/10 text-gray-500 hover:text-loss transition-all"
-                >
-                  <Trash2 size={12} />
-                </button>
-
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-display font-semibold text-sm">
-                    {isComplete ? "🏆 " : ""}
-                    {g.title}
-                  </h3>
-                  <span className="text-[10px] text-gray-500">
-                    {daysLeft}d left
-                  </span>
-                </div>
-
-                <div className="flex items-baseline gap-2 mb-3">
-                  <span className="text-lg font-mono font-bold" style={{ color }}>
-                    ${totalRevenue.toLocaleString()}
-                  </span>
-                  <span className="text-xs text-gray-500">
-                    / ${g.targetRevenue.toLocaleString()}
-                  </span>
-                  <span
-                    className="text-xs font-mono font-bold ml-auto"
-                    style={{ color }}
+                {/* Action buttons on hover */}
+                <div className="absolute top-3 right-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {editingId !== g.id && (
+                    <button
+                      onClick={() => handleStartEdit(g)}
+                      className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition-all"
+                    >
+                      <Edit3 size={12} />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => deleteGoal(g.id)}
+                    className="p-1.5 rounded-lg hover:bg-loss/10 text-gray-500 hover:text-loss transition-all"
                   >
-                    {pct.toFixed(0)}%
-                  </span>
+                    <Trash2 size={12} />
+                  </button>
                 </div>
 
-                <div className="h-2 rounded-full bg-white/5 overflow-hidden">
+                {editingId === g.id ? (
+                  <div className="space-y-3">
+                    <input
+                      type="text"
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-white/[0.03] border border-glass-border text-white text-sm font-semibold focus:outline-none focus:border-profit/30"
+                      autoFocus
+                    />
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="relative">
+                        <input
+                          type="number"
+                          value={editTarget}
+                          onChange={(e) => setEditTarget(Number(e.target.value))}
+                          className="w-full px-3 py-2 rounded-lg bg-white/[0.03] border border-glass-border text-white text-sm focus:outline-none focus:border-profit/30"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] text-gray-500">target $</span>
+                      </div>
+                      <input
+                        type="date"
+                        value={editDeadline}
+                        onChange={(e) => setEditDeadline(e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg bg-white/[0.03] border border-glass-border text-white text-sm focus:outline-none focus:border-profit/30"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleSaveEdit}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-profit/20 text-profit text-xs font-semibold hover:bg-profit/30 transition-colors"
+                      >
+                        <Check size={12} /> Save
+                      </button>
+                      <button
+                        onClick={() => setEditingId(null)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 text-gray-400 text-xs hover:text-white transition-colors"
+                      >
+                        <X size={12} /> Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="font-display font-semibold text-sm">
+                        {isComplete ? "🏆 " : ""}
+                        {g.title}
+                      </h3>
+                      <span className="text-[10px] text-gray-500">
+                        {daysLeft}d left
+                      </span>
+                    </div>
+
+                    <div className="flex items-baseline gap-2 mb-3">
+                      <span className="text-lg font-mono font-bold" style={{ color }}>
+                        ${totalRevenue.toLocaleString()}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        / ${g.targetRevenue.toLocaleString()}
+                      </span>
+                      <span
+                        className="text-xs font-mono font-bold ml-auto"
+                        style={{ color }}
+                      >
+                        {pct.toFixed(0)}%
+                      </span>
+                    </div>
+                  </>
+                )}
+
+                <div
+                  className={`h-2 rounded-full overflow-hidden ${editingId === g.id ? "mt-4" : ""}`}
+                  style={isLight ? {
+                    background: "rgb(218 223 230)",
+                    boxShadow: "inset 2px 2px 4px #b8bec7, inset -2px -2px 4px #ffffff",
+                  } : {
+                    background: "rgba(255,255,255,0.05)",
+                  }}
+                >
                   <motion.div
                     className="h-full rounded-full"
-                    style={{ background: color }}
+                    style={{
+                      background: color,
+                      boxShadow: isLight ? `0 0 6px ${color}60` : undefined,
+                    }}
                     initial={{ width: 0 }}
                     animate={{ width: `${pct}%` }}
                     transition={{ duration: 1, ease: "easeOut" }}

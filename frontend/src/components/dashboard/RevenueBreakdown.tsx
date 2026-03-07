@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import type { Task } from "../../types";
+import type { Task, Category } from "../../types";
 import { revenueByType } from "../../utils/calculations";
 
 const TYPE_COLORS: Record<string, string> = {
@@ -10,8 +10,8 @@ const TYPE_COLORS: Record<string, string> = {
   "Other": "#06b6d4",
 };
 
-export default function RevenueBreakdown({ tasks }: { tasks: Task[] }) {
-  const data = revenueByType(tasks);
+export default function RevenueBreakdown({ tasks, categories }: { tasks: Task[]; categories?: Category[] }) {
+  const data = revenueByType(tasks, categories);
   const total = data.reduce((s, d) => s + d.value, 0);
 
   return (
@@ -19,7 +19,7 @@ export default function RevenueBreakdown({ tasks }: { tasks: Task[] }) {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.35 }}
-      className="glass rounded-2xl p-5"
+      className="glass rounded-2xl p-3 sm:p-5"
     >
       <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-4">
         Revenue Breakdown
@@ -27,7 +27,8 @@ export default function RevenueBreakdown({ tasks }: { tasks: Task[] }) {
       <div className="space-y-3">
         {data.map((d, i) => {
           const pct = total > 0 ? (d.value / total) * 100 : 0;
-          const color = TYPE_COLORS[d.name] || "#64748b";
+          const cat = categories?.find((c) => c.name === d.name);
+          const color = cat?.color || TYPE_COLORS[d.name] || "#64748b";
           return (
             <div key={d.name}>
               <div className="flex items-center justify-between mb-1">

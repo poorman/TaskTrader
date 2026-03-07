@@ -8,7 +8,7 @@ import {
   AlertTriangle,
   CalendarDays,
 } from "lucide-react";
-import type { Task, Client, TaskStatus } from "../../types";
+import type { Task, Client, Category, TaskStatus } from "../../types";
 import { useTaskStore } from "../../stores/taskStore";
 import { useUIStore } from "../../stores/uiStore";
 import TaskCard from "./TaskCard";
@@ -28,6 +28,7 @@ interface Props {
   dotColor: string;
   tasks: Task[];
   clients: Client[];
+  categories?: Category[];
   onDrop: (taskId: string, newStatus: TaskStatus) => void;
   onEditTask?: (task: Task) => void;
 }
@@ -38,6 +39,7 @@ export default function Column({
   dotColor,
   tasks,
   clients,
+  categories,
   onDrop,
   onEditTask,
 }: Props) {
@@ -214,6 +216,7 @@ export default function Column({
               <TaskCard
                 task={task}
                 client={clientMap[task.clientId]}
+                categories={categories}
                 dragControls
                 onEdit={onEditTask}
               />

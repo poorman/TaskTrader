@@ -12,7 +12,7 @@ export default function Layout({ children }: { children: ReactNode }) {
   }, [theme]);
 
   return (
-    <div className="flex h-screen bg-surface-0 relative overflow-hidden noise">
+    <div className="flex h-[100dvh] bg-surface-0 relative overflow-hidden noise">
       {/* Background ambient gradient (hidden in light theme via CSS) */}
       <div
         className="pointer-events-none absolute inset-0 transition-opacity duration-300"
@@ -26,7 +26,7 @@ export default function Layout({ children }: { children: ReactNode }) {
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0 relative">
         <Header />
-        <main className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6" style={{ WebkitOverflowScrolling: "touch" }}>{children}</main>
       </div>
     </div>
   );

@@ -27,7 +27,7 @@ const MEETING_ICONS: Record<Meeting["type"], typeof Phone> = {
 const MEETING_COLORS: Record<Meeting["type"], string> = {
   call: "#3b82f6",
   video: "#a855f7",
-  in_person: "#00ff88",
+  in_person: "rgb(var(--color-profit))",
   review: "#ffaa00",
 };
 

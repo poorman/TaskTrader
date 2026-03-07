@@ -1,5 +1,43 @@
-import type { Task, DailySnapshot } from "../types";
-import { toLocalDate } from "./timezone";
+import type { Task, Category, DailySnapshot } from "../types";
+import { toLocalDate, todayLocal } from "./timezone";
+import type { TimeRange } from "../stores/uiStore";
+
+/** Returns a cutoff ISO date string for filtering tasks by time range */
+export function getTimeRangeCutoff(range: TimeRange): string {
+  const now = new Date();
+  switch (range) {
+    case "Today": {
+      const today = todayLocal();
+      return today + "T00:00:00";
+    }
+    case "1W":
+      now.setDate(now.getDate() - 7);
+      break;
+    case "1M":
+      now.setMonth(now.getMonth() - 1);
+      break;
+    case "3M":
+      now.setMonth(now.getMonth() - 3);
+      break;
+    case "1Y":
+      now.setFullYear(now.getFullYear() - 1);
+      break;
+  }
+  return now.toISOString();
+}
+
+/** Filter tasks that are relevant to the given time range */
+export function filterTasksByTimeRange(tasks: Task[], range: TimeRange): Task[] {
+  if (range === "1Y") return tasks; // show all for 1Y
+  const cutoff = getTimeRangeCutoff(range);
+  return tasks.filter((t) => {
+    // Always include active tasks (not completed/lost)
+    if (t.status !== "completed" && t.status !== "lost") return true;
+    // For completed/lost, filter by completedAt date
+    const date = t.completedAt || t.createdAt;
+    return date >= cutoff;
+  });
+}
 
 export function calculatePnL(
   estimatedHours: number,
@@ -48,14 +86,21 @@ export function calculateLostRevenue(tasks: Task[]): number {
 }
 
 export function revenueByType(
-  tasks: Task[]
+  tasks: Task[],
+  categories?: Category[]
 ): { name: string; value: number }[] {
   const map: Record<string, number> = {};
   tasks
     .filter((t) => t.status === "completed")
     .forEach((t) => {
-      const label = t.projectType.replace("_", " ");
-      const name = label.charAt(0).toUpperCase() + label.slice(1);
+      // Resolve category name from UUID or slug
+      const cat = categories?.find(
+        (c) => c.id === t.projectType || c.name.toLowerCase().replace(/ /g, "_") === t.projectType
+      );
+      const name = cat?.name || (() => {
+        const label = t.projectType.replace("_", " ");
+        return label.charAt(0).toUpperCase() + label.slice(1);
+      })();
       map[name] = (map[name] || 0) + t.revenue;
     });
   return Object.entries(map)

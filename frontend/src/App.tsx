@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import Layout from "./components/layout/Layout";
 import Dashboard from "./pages/Dashboard";
 import TaskBoard from "./pages/TaskBoard";
@@ -38,17 +38,14 @@ function PageContent() {
   };
 
   return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={activePage}
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -8, pointerEvents: "none" as const }}
-        transition={{ duration: 0.2 }}
-      >
-        {pages[activePage] || <Dashboard />}
-      </motion.div>
-    </AnimatePresence>
+    <motion.div
+      key={activePage}
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2 }}
+    >
+      {pages[activePage] || <Dashboard />}
+    </motion.div>
   );
 }
 

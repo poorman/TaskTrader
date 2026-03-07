@@ -1,7 +1,7 @@
 import type { Priority, TaskStatus } from "../../types";
 
 const PRIORITY_STYLES: Record<Priority, string> = {
-  urgent: "bg-loss/20 text-loss border-loss/30",
+  urgent: "bg-loss/20 text-loss border-loss/50",
   high: "bg-accent-amber/20 text-accent-amber border-accent-amber/30",
   medium: "bg-accent-blue/20 text-accent-blue border-accent-blue/30",
   low: "bg-white/5 text-gray-400 border-white/10",

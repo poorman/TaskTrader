@@ -10,7 +10,7 @@ import {
   CheckCircle2,
   Circle,
 } from "lucide-react";
-import type { Task, Client } from "../../types";
+import type { Task, Client, Category } from "../../types";
 import { PriorityBadge } from "../shared/Badge";
 import { useTaskStore } from "../../stores/taskStore";
 import { useUIStore } from "../../stores/uiStore";
@@ -18,11 +18,13 @@ import { useUIStore } from "../../stores/uiStore";
 export default function TaskCard({
   task,
   client,
+  categories,
   dragControls,
   onEdit,
 }: {
   task: Task;
   client?: Client;
+  categories?: Category[];
   dragControls?: boolean;
   onEdit?: (task: Task) => void;
 }) {
@@ -31,14 +33,22 @@ export default function TaskCard({
   const toggleSubtask = useTaskStore((s) => s.toggleSubtask);
   const deleteSubtask = useTaskStore((s) => s.deleteSubtask);
   const theme = useUIStore((s) => s.theme);
+  const compactView = useUIStore((s) => s.compactView);
 
   const [expanded, setExpanded] = useState(false);
   const [newSubtask, setNewSubtask] = useState("");
 
+  // Resolve category from projectType (may be UUID or slug like "web_design")
+  const category = categories?.find(
+    (c) => c.id === task.projectType || c.name.toLowerCase().replace(/ /g, "_") === task.projectType
+  );
+  const categoryLabel = category?.name || task.projectType.replace("_", " ");
+  const categoryColor = category?.color || client?.color || "#64748b";
+
   const isProfit = task.pnl >= 0;
   const subtasks = task.subtasks || [];
   const doneCount = subtasks.filter((s) => s.done).length;
-  const profitColor = theme === "light" ? "#2dce89" : "#00ff88";
+  const profitColor = "rgb(var(--color-profit))";
   const lossColor = "#ff4466";
   const neutralColor = theme === "light" ? "#2d3436" : "#e2e8f0";
   const progressColor =
@@ -57,6 +67,54 @@ export default function TaskCard({
     addSubtask(task.id, newSubtask.trim());
     setNewSubtask("");
   };
+
+  if (compactView) {
+    return (
+      <motion.div
+        layout
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        onClick={() => onEdit?.(task)}
+        className="glass rounded-lg px-3 py-2 cursor-grab active:cursor-grabbing group hover:border-white/10 transition-all relative"
+      >
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex-1 min-w-0">
+            <h4 className="text-xs font-semibold text-white truncate">
+              {task.title}
+            </h4>
+            <p className="text-[9px] text-gray-500 truncate">
+              {client?.name || "Unknown"} · {categoryLabel}
+            </p>
+          </div>
+          <span
+            className="text-xs font-mono font-bold shrink-0"
+            style={{ color: task.status === "completed" || task.status === "lost" ? (isProfit ? profitColor : lossColor) : neutralColor }}
+          >
+            {task.status === "completed" || task.status === "lost"
+              ? `${task.pnl >= 0 ? "+" : ""}$${task.pnl.toLocaleString()}`
+              : `$${task.revenue.toLocaleString()}`}
+          </span>
+        </div>
+        {task.progress > 0 && task.status !== "lost" && (
+          <div className="h-0.5 rounded-full bg-white/5 overflow-hidden mt-1.5">
+            <div
+              className="h-full rounded-full"
+              style={{ background: progressColor, width: `${task.progress}%` }}
+            />
+          </div>
+        )}
+        <div className="flex items-center justify-between mt-1.5">
+          <PriorityBadge priority={task.priority} />
+          {task.dueDate && (
+            <span className="text-[9px] text-gray-500">
+              {new Date(task.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+            </span>
+          )}
+        </div>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div
@@ -80,13 +138,11 @@ export default function TaskCard({
             {task.title}
           </h4>
           <p className="text-[10px] text-gray-500 mt-0.5 flex items-center gap-1">
-            {client && (
-              <span
-                className="w-2 h-2 rounded-full shrink-0"
-                style={{ background: client.color }}
-              />
-            )}
-            {client?.name || "Unknown"} · {task.projectType.replace("_", " ")}
+            <span
+              className="w-2 h-2 rounded-full shrink-0"
+              style={{ background: categoryColor }}
+            />
+            {client?.name || "Unknown"} · {categoryLabel}
           </p>
         </div>
         <button

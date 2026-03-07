@@ -180,7 +180,6 @@ export default function TaskEditModal({ task, onClose }: Props) {
                       setProjectType(e.target.value as ProjectType)
                     }
                     className={inputClass}
-                    disabled={isTerminal}
                   >
                     {categories.map((cat) => (
                       <option key={cat.id} value={cat.id} className="bg-surface-2">
@@ -389,14 +388,12 @@ export default function TaskEditModal({ task, onClose }: Props) {
                 >
                   Cancel
                 </button>
-                {!isTerminal && (
-                  <button
-                    onClick={handleSave}
-                    className="px-4 py-1.5 text-xs font-bold rounded-lg bg-gradient-to-r from-profit to-accent-cyan text-surface-0 transition-all hover:shadow-lg hover:shadow-profit/20"
-                  >
-                    Save Changes
-                  </button>
-                )}
+                <button
+                  onClick={handleSave}
+                  className="px-4 py-1.5 text-xs font-bold rounded-lg bg-gradient-to-r from-profit to-accent-cyan text-surface-0 transition-all hover:shadow-lg hover:shadow-profit/20"
+                >
+                  Save Changes
+                </button>
               </div>
             </div>
           </motion.div>

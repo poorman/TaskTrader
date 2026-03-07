@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { useTaskStore } from "../../stores/taskStore";
 import { useUIStore } from "../../stores/uiStore";
 import { useGamificationStore } from "../../stores/gamificationStore";
-import { calculateWinRate } from "../../utils/calculations";
+import { calculateWinRate, filterTasksByTimeRange } from "../../utils/calculations";
 import type { Task, TaskStatus } from "../../types";
 import Column from "./Column";
 import Modal from "../shared/Modal";
@@ -20,17 +20,22 @@ const COLUMNS: { status: TaskStatus; label: string; dotColor: string }[] = [
 export default function Board() {
   const allTasks = useTaskStore((s) => s.tasks);
   const clients = useTaskStore((s) => s.clients);
+  const categories = useTaskStore((s) => s.categories);
   const searchQuery = useUIStore((s) => s.searchQuery);
+  const timeRange = useUIStore((s) => s.timeRange);
 
   const tasks = useMemo(() => {
-    if (!searchQuery.trim()) return allTasks;
-    const q = searchQuery.toLowerCase();
-    return allTasks.filter((t) =>
-      t.title.toLowerCase().includes(q) ||
-      clients.find((c) => c.id === t.clientId)?.name.toLowerCase().includes(q) ||
-      t.projectType.toLowerCase().includes(q)
-    );
-  }, [allTasks, clients, searchQuery]);
+    let filtered = filterTasksByTimeRange(allTasks, timeRange);
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter((t) =>
+        t.title.toLowerCase().includes(q) ||
+        clients.find((c) => c.id === t.clientId)?.name.toLowerCase().includes(q) ||
+        t.projectType.toLowerCase().includes(q)
+      );
+    }
+    return filtered;
+  }, [allTasks, clients, searchQuery, timeRange]);
   const moveTask = useTaskStore((s) => s.moveTask);
   const completeTask = useTaskStore((s) => s.completeTask);
   const onTaskCompleted = useGamificationStore((s) => s.onTaskCompleted);
@@ -150,6 +155,7 @@ export default function Board() {
             dotColor={col.dotColor}
             tasks={tasks.filter((t) => t.status === col.status)}
             clients={clients}
+            categories={categories}
             onDrop={handleDrop}
             onEditTask={setEditingTask}
           />
@@ -217,7 +223,7 @@ export default function Board() {
               </p>
               <p
                 className="text-2xl font-mono font-bold"
-                style={{ color: previewPnL >= 0 ? "#00ff88" : "#ff4466" }}
+                style={{ color: previewPnL >= 0 ? "rgb(var(--color-profit))" : "#ff4466" }}
               >
                 {previewPnL >= 0 ? "+" : ""}${previewPnL.toLocaleString()}
               </p>

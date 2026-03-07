@@ -32,10 +32,12 @@ interface TaskStore {
 
   // Category CRUD
   addCategory: (cat: Omit<Category, "id">) => string;
+  updateCategory: (id: string, partial: Partial<Category>) => void;
   deleteCategory: (id: string) => void;
 
   // Goal CRUD
   addGoal: (goal: Omit<Goal, "id" | "createdAt" | "currentRevenue">) => string;
+  updateGoal: (id: string, partial: Partial<Goal>) => void;
   deleteGoal: (id: string) => void;
 
   // Meeting CRUD
@@ -217,6 +219,11 @@ export const useTaskStore = create<TaskStore>()(
         return id;
       },
 
+      updateCategory: (id, partial) =>
+        set((s) => ({
+          categories: s.categories.map((c) => (c.id === id ? { ...c, ...partial } : c)),
+        })),
+
       deleteCategory: (id) =>
         set((s) => ({
           categories: s.categories.filter((c) => c.id !== id),
@@ -232,6 +239,11 @@ export const useTaskStore = create<TaskStore>()(
         }));
         return id;
       },
+
+      updateGoal: (id, partial) =>
+        set((s) => ({
+          goals: s.goals.map((g) => (g.id === id ? { ...g, ...partial } : g)),
+        })),
 
       deleteGoal: (id) =>
         set((s) => ({ goals: s.goals.filter((g) => g.id !== id) })),

@@ -195,7 +195,7 @@ export default function Clients() {
                     <p className="text-[9px] text-gray-500 uppercase">P&L</p>
                     <p
                       className="text-sm font-mono font-bold"
-                      style={{ color: s.pnl >= 0 ? (isLight ? "#2dce89" : "#00ff88") : "#ff4466" }}
+                      style={{ color: s.pnl >= 0 ? "rgb(var(--color-profit))" : "#ff4466" }}
                     >
                       {s.pnl >= 0 ? "+" : ""}${s.pnl.toLocaleString()}
                     </p>
