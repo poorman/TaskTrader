@@ -127,4 +127,5 @@ export interface DailySnapshot {
   pnl: number;
   tasksCompleted: number;
   tasksLost: number;
+  lostRevenue: number;
 }

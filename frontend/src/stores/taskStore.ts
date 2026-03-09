@@ -120,6 +120,7 @@ export const useTaskStore = create<TaskStore>()(
                 pnl,
                 progress: 100,
                 completedAt: now,
+                subtasks: (t.subtasks || []).map((st) => ({ ...st, done: true })),
               };
             }
             // When moved to lost, set negative P&L

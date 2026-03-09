@@ -22,6 +22,20 @@ const PAGE_TITLES: Record<Page, string> = {
 
 const TIME_RANGES = ["Today", "1W", "1M", "3M", "1Y"];
 
+function formatNotifDate(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const diff = now.getTime() - d.getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "Just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `${days}d ago`;
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
 export default function Header() {
   const { activePage, searchQuery, setSearch, setMobileMenu, setPage, theme, toggleTheme, timeRange, setTimeRange, compactView, toggleCompactView } = useUIStore();
   const tasks = useTaskStore((s) => s.tasks);
@@ -263,7 +277,7 @@ export default function Header() {
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-semibold text-white truncate">{task.title}</p>
                         <p className="text-[10px] text-gray-500">
-                          {client?.name || "Unknown"} · {isCompleted ? "Completed" : isLost ? "Lost" : "In Progress"}
+                          {client?.name || "Unknown"} · {isCompleted ? "Completed" : isLost ? "Lost" : "In Progress"} · {formatNotifDate(task.completedAt || task.startedAt || task.createdAt)}
                         </p>
                       </div>
                     </button>
@@ -305,6 +319,18 @@ export default function Header() {
           if (diff < -50) setMobileExtras(false);  // swipe right → hide extras
         }}
       >
+        {/* Time range cycle button */}
+        <button
+          onClick={() => {
+            const idx = TIME_RANGES.indexOf(timeRange);
+            const next = TIME_RANGES[(idx + 1) % TIME_RANGES.length];
+            setTimeRange(next as typeof timeRange);
+          }}
+          className="px-2.5 py-2 rounded-xl glass-hover text-xs font-semibold text-gray-300 transition-colors"
+        >
+          {timeRange}
+        </button>
+
         {/* Always visible: + and Bell */}
         <button
           onClick={() => setPage("newtask")}

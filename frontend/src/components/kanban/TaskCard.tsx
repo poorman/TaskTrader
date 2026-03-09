@@ -15,6 +15,36 @@ import { PriorityBadge } from "../shared/Badge";
 import { useTaskStore } from "../../stores/taskStore";
 import { useUIStore } from "../../stores/uiStore";
 
+/**
+ * 1. Due in 1+ days: no color
+ * 2. Due today: light orange → stronger orange as end of day approaches
+ * 3. Overdue: light red (10%) escalating to full red (35%) over 3 days
+ */
+function getOverdueStyle(task: Task): React.CSSProperties | undefined {
+  if (!task.dueDate) return undefined;
+  if (task.status === "completed" || task.status === "lost") return undefined;
+  const now = new Date();
+  const due = new Date(task.dueDate);
+  const isToday =
+    now.getFullYear() === due.getFullYear() &&
+    now.getMonth() === due.getMonth() &&
+    now.getDate() === due.getDate();
+  if (isToday) {
+    // Progress through the day: 0 at midnight → 1 at 23:59
+    const hoursIntoDay = now.getHours() + now.getMinutes() / 60;
+    const t = hoursIntoDay / 24;
+    const opacity = 0.05 + t * 0.2; // 5% → 25%
+    return { backgroundColor: `rgba(255, 170, 0, ${opacity.toFixed(3)})` };
+  }
+  // Future due date — no color
+  if (now.getTime() <= due.getTime()) return undefined;
+  // Overdue — escalate red over 3 days (72 hours)
+  const hoursLate = (now.getTime() - due.getTime()) / 3_600_000;
+  const t = Math.min(hoursLate / 72, 1);
+  const opacity = 0.10 + t * 0.25; // 10% → 35%
+  return { backgroundColor: `rgba(255, 68, 102, ${opacity.toFixed(3)})` };
+}
+
 export default function TaskCard({
   task,
   client,
@@ -77,16 +107,13 @@ export default function TaskCard({
         exit={{ opacity: 0, scale: 0.95 }}
         onClick={() => onEdit?.(task)}
         className="glass rounded-lg px-3 py-2 cursor-grab active:cursor-grabbing group hover:border-white/10 transition-all relative"
+        style={getOverdueStyle(task)}
       >
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <h4 className="text-xs font-semibold text-white truncate">
-              {task.title}
-            </h4>
-            <p className="text-[9px] text-gray-500 truncate">
-              {client?.name || "Unknown"} · {categoryLabel}
-            </p>
-          </div>
+        <div className="flex items-center gap-1.5 mb-0.5">
+          <PriorityBadge priority={task.priority} />
+          <h4 className="text-xs font-semibold text-white truncate flex-1">
+            {task.title}
+          </h4>
           <span
             className="text-xs font-mono font-bold shrink-0"
             style={{ color: task.status === "completed" || task.status === "lost" ? (isProfit ? profitColor : lossColor) : neutralColor }}
@@ -96,22 +123,28 @@ export default function TaskCard({
               : `$${task.revenue.toLocaleString()}`}
           </span>
         </div>
+        <div className="flex items-center justify-between">
+          <p className="text-[9px] text-gray-500 truncate">
+            {client?.name || "Unknown"} · {categoryLabel}
+          </p>
+          {(() => {
+            const dateStr = (task.status === "completed" || task.status === "lost") ? task.completedAt : task.dueDate;
+            if (!dateStr) return null;
+            return (
+              <span className="text-[9px] text-gray-500 shrink-0">
+                {new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+              </span>
+            );
+          })()}
+        </div>
         {task.progress > 0 && task.status !== "lost" && (
-          <div className="h-0.5 rounded-full bg-white/5 overflow-hidden mt-1.5">
+          <div className="h-0.5 rounded-full bg-white/5 overflow-hidden mt-1">
             <div
               className="h-full rounded-full"
               style={{ background: progressColor, width: `${task.progress}%` }}
             />
           </div>
         )}
-        <div className="flex items-center justify-between mt-1.5">
-          <PriorityBadge priority={task.priority} />
-          {task.dueDate && (
-            <span className="text-[9px] text-gray-500">
-              {new Date(task.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-            </span>
-          )}
-        </div>
       </motion.div>
     );
   }
@@ -125,6 +158,7 @@ export default function TaskCard({
       whileHover={{ y: -2, transition: { duration: 0.15 } }}
       onClick={() => onEdit?.(task)}
       className="glass rounded-xl p-3.5 cursor-grab active:cursor-grabbing group hover:border-white/10 transition-all relative"
+      style={getOverdueStyle(task)}
     >
       {dragControls && (
         <div className="absolute left-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-40 transition-opacity">
@@ -132,19 +166,11 @@ export default function TaskCard({
         </div>
       )}
 
-      <div className="flex items-start justify-between mb-2">
-        <div className="flex-1 min-w-0 pr-2">
-          <h4 className="text-sm font-semibold text-white truncate">
-            {task.title}
-          </h4>
-          <p className="text-[10px] text-gray-500 mt-0.5 flex items-center gap-1">
-            <span
-              className="w-2 h-2 rounded-full shrink-0"
-              style={{ background: categoryColor }}
-            />
-            {client?.name || "Unknown"} · {categoryLabel}
-          </p>
-        </div>
+      <div className="flex items-center gap-1.5 mb-1">
+        <PriorityBadge priority={task.priority} />
+        <h4 className="text-sm font-semibold text-white truncate flex-1">
+          {task.title}
+        </h4>
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -159,6 +185,13 @@ export default function TaskCard({
           />
         </button>
       </div>
+      <p className="text-[10px] text-gray-500 mb-1.5 flex items-center gap-1">
+        <span
+          className="w-2 h-2 rounded-full shrink-0"
+          style={{ background: categoryColor }}
+        />
+        {client?.name || "Unknown"} · {categoryLabel}
+      </p>
 
       {/* Value + Progress */}
       <div className="flex items-center justify-between mb-2">
@@ -311,7 +344,6 @@ export default function TaskCard({
 
       {/* Footer */}
       <div className="flex items-center justify-between">
-        <PriorityBadge priority={task.priority} />
         <div className="flex items-center gap-2">
           {task.estimatedHours > 0 && (
             <span className="text-[10px] text-gray-500 flex items-center gap-0.5">
@@ -321,15 +353,16 @@ export default function TaskCard({
                 : `${task.estimatedHours}h`}
             </span>
           )}
-          {task.dueDate && (
-            <span className="text-[10px] text-gray-500">
-              {new Date(task.dueDate).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-              })}
-            </span>
-          )}
         </div>
+        {(() => {
+          const dateStr = (task.status === "completed" || task.status === "lost") ? task.completedAt : task.dueDate;
+          if (!dateStr) return null;
+          return (
+            <span className="text-[10px] text-gray-500">
+              {new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+            </span>
+          );
+        })()}
       </div>
     </motion.div>
   );

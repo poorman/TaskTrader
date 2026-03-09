@@ -29,6 +29,18 @@ export function getTimeRangeCutoff(range: TimeRange): string {
 /** Filter tasks that are relevant to the given time range */
 export function filterTasksByTimeRange(tasks: Task[], range: TimeRange): Task[] {
   if (range === "1Y") return tasks; // show all for 1Y
+
+  if (range === "Today") {
+    // Compare local dates to avoid timezone issues with ISO strings
+    const today = todayLocal();
+    return tasks.filter((t) => {
+      if (t.status !== "completed" && t.status !== "lost") return true;
+      const date = t.completedAt || t.createdAt;
+      if (!date) return false;
+      return toLocalDate(date) === today;
+    });
+  }
+
   const cutoff = getTimeRangeCutoff(range);
   return tasks.filter((t) => {
     // Always include active tasks (not completed/lost)
@@ -56,15 +68,29 @@ export function calculateRevenue(
 
 export function calculateWinRate(tasks: Task[]): number {
   const completed = tasks.filter((t) => t.status === "completed");
-  if (completed.length === 0) return 0;
+  const lost = tasks.filter((t) => t.status === "lost");
   const wins = completed.filter((t) => t.pnl >= 0).length;
-  return Math.round((wins / completed.length) * 100);
+  const losses = completed.filter((t) => t.pnl < 0).length + lost.length;
+  const total = wins + losses;
+  if (total === 0) return 0;
+  return Math.round((wins / total) * 100);
 }
 
 export function calculateTotalPnL(tasks: Task[]): number {
   return tasks
-    .filter((t) => t.status === "completed" || t.status === "lost")
+    .filter((t) => t.status === "completed")
     .reduce((sum, t) => sum + t.pnl, 0);
+}
+
+export function calculatePotentialRevenue(tasks: Task[]): number {
+  // Realized profit from completed tasks + revenue lost from lost deals
+  const realizedPnL = tasks
+    .filter((t) => t.status === "completed")
+    .reduce((sum, t) => sum + t.pnl, 0);
+  const lostRev = tasks
+    .filter((t) => t.status === "lost")
+    .reduce((sum, t) => sum + t.revenue, 0);
+  return realizedPnL + lostRev;
 }
 
 export function calculateRealizedPnL(tasks: Task[]): number {
@@ -124,30 +150,24 @@ export function buildDailySnapshots(tasks: Task[]): DailySnapshot[] {
         pnl: 0,
         tasksCompleted: 0,
         tasksLost: 0,
+        lostRevenue: 0,
       };
     }
     const snap = map[date];
     if (t.status === "completed") {
-      snap.revenue += t.revenue;
+      snap.revenue += t.pnl; // potential = realized PnL for completed
       snap.cost += t.actualHours * t.hourlyRate;
       snap.pnl += t.pnl;
       snap.tasksCompleted++;
     } else {
-      snap.pnl += t.pnl;
+      snap.revenue += t.revenue; // potential = full revenue for lost
+      snap.lostRevenue += t.revenue;
       snap.tasksLost++;
     }
   });
-  const snapshots = Object.values(map).sort(
+  return Object.values(map).sort(
     (a, b) => a.date.localeCompare(b.date)
   );
-  // Make cumulative
-  let cumPnl = 0;
-  let cumRevenue = 0;
-  return snapshots.map((s) => {
-    cumPnl += s.pnl;
-    cumRevenue += s.revenue;
-    return { ...s, pnl: cumPnl, revenue: cumRevenue };
-  });
 }
 
 export function formatCurrency(value: number): string {

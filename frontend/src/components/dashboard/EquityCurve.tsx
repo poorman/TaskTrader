@@ -41,13 +41,15 @@ function CustomTooltip({
           return `${months[m - 1]} ${day}`;
         })()}
       </p>
+      <p style={{ color: "#ffaa00" }} className="font-mono">
+        Potential: ${d.revenue.toLocaleString()}
+      </p>
       <p className="text-profit font-mono">
-        {d.tasksCompleted} Tasks Completed: $
-        {d.revenue.toLocaleString()}
+        Realized P&L: ${d.pnl.toLocaleString()}
       </p>
       {d.tasksLost > 0 && (
         <p className="text-loss font-mono">
-          {d.tasksLost} Task Lost: -${Math.abs(d.pnl).toLocaleString()}
+          {d.tasksLost} Lost: -${d.lostRevenue.toLocaleString()}
         </p>
       )}
     </div>

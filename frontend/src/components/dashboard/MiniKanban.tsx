@@ -1,10 +1,36 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Bookmark } from "lucide-react";
 import type { Task, Client, Category, TaskStatus } from "../../types";
 import { PriorityBadge } from "../shared/Badge";
 import { useTaskStore } from "../../stores/taskStore";
 import { useUIStore } from "../../stores/uiStore";
+
+/**
+ * 1. Due in 1+ days: no color
+ * 2. Due today: light orange → stronger orange as end of day approaches
+ * 3. Overdue: light red (10%) escalating to full red (35%) over 3 days
+ */
+function getOverdueStyle(task: Task): React.CSSProperties | undefined {
+  if (!task.dueDate) return undefined;
+  if (task.status === "completed" || task.status === "lost") return undefined;
+  const now = new Date();
+  const due = new Date(task.dueDate);
+  const isToday =
+    now.getFullYear() === due.getFullYear() &&
+    now.getMonth() === due.getMonth() &&
+    now.getDate() === due.getDate();
+  if (isToday) {
+    const hoursIntoDay = now.getHours() + now.getMinutes() / 60;
+    const t = hoursIntoDay / 24;
+    const opacity = 0.05 + t * 0.2;
+    return { backgroundColor: `rgba(255, 170, 0, ${opacity.toFixed(3)})` };
+  }
+  if (now.getTime() <= due.getTime()) return undefined;
+  const hoursLate = (now.getTime() - due.getTime()) / 3_600_000;
+  const t = Math.min(hoursLate / 72, 1);
+  const opacity = 0.10 + t * 0.25;
+  return { backgroundColor: `rgba(255, 68, 102, ${opacity.toFixed(3)})` };
+}
 
 const COLUMNS: { status: TaskStatus; label: string; dotColor: string }[] = [
   { status: "lead", label: "Lead", dotColor: "#ffaa00" },
@@ -25,7 +51,6 @@ function TaskCard({
   categories?: Category[];
   compact?: boolean;
 }) {
-  const toggleBookmark = useTaskStore((s) => s.toggleBookmark);
   const category = categories?.find(
     (c) => c.id === task.projectType || c.name.toLowerCase().replace(/ /g, "_") === task.projectType
   );
@@ -47,6 +72,7 @@ function TaskCard({
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         className="glass rounded-lg px-2.5 py-1.5 cursor-grab active:cursor-grabbing group hover:border-white/10 transition-all"
+        style={getOverdueStyle(task)}
       >
         <div className="flex items-center justify-between gap-2">
           <h4 className="text-[10px] font-semibold text-white truncate flex-1">
@@ -76,56 +102,59 @@ function TaskCard({
       layout
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="glass rounded-xl p-3 card-shine cursor-grab active:cursor-grabbing group hover:border-white/10 transition-all"
+      className="glass rounded-xl px-3 py-2 card-shine cursor-grab active:cursor-grabbing group hover:border-white/10 transition-all"
+      style={getOverdueStyle(task)}
     >
-      <div className="flex items-start justify-between mb-1.5">
-        <h4 className="text-xs font-semibold text-white truncate pr-2">
+      {/* Row 1: priority dot + title */}
+      <div className="flex items-center gap-1.5 mb-1">
+        <PriorityBadge priority={task.priority} />
+        <h4 className="text-xs font-semibold text-white truncate flex-1">
           {task.title}
         </h4>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            toggleBookmark(task.id);
-          }}
-          className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-500 hover:text-accent-amber"
-        >
-          <Bookmark
-            size={12}
-            fill={task.bookmarked ? "#ffaa00" : "none"}
-            className={task.bookmarked ? "text-accent-amber opacity-100" : ""}
-          />
-        </button>
       </div>
 
-      <p className="text-[10px] text-gray-500 mb-2">
+      {/* Row 2: client · category */}
+      <p className="text-[10px] text-gray-500 mb-1">
         {client?.name || "Unknown"} · {categoryLabel}
       </p>
 
-      <div className="flex items-center justify-between mb-2">
+      {/* Row 3: revenue + progress/lost + due date */}
+      <div className="flex items-center justify-between">
         <span className="text-sm font-mono font-bold" style={{ color: isProfit ? "rgb(var(--color-profit))" : "#ff4466" }}>
           {task.status === "completed" || task.status === "lost"
             ? `${task.pnl >= 0 ? "+" : ""}$${task.pnl.toLocaleString()}`
             : `$${task.revenue.toLocaleString()}`}
         </span>
-        {task.progress > 0 && task.status !== "lost" && (
-          <span className="text-[10px] font-mono text-gray-400 flex items-center gap-1">
-            <span
-              className="inline-block w-1.5 h-1.5 rounded-full"
-              style={{ background: progressColor }}
-            />
-            {task.progress}%
-          </span>
-        )}
-        {task.status === "lost" && (
-          <span className="text-[9px] font-semibold text-loss bg-loss/10 px-1.5 py-0.5 rounded">
-            Lost
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {task.progress > 0 && task.status !== "lost" && (
+            <span className="text-[10px] font-mono text-gray-400 flex items-center gap-1">
+              <span
+                className="inline-block w-1.5 h-1.5 rounded-full"
+                style={{ background: progressColor }}
+              />
+              {task.progress}%
+            </span>
+          )}
+          {task.status === "lost" && (
+            <span className="text-[9px] font-semibold text-loss bg-loss/10 px-1.5 py-0.5 rounded">
+              Lost
+            </span>
+          )}
+          {(() => {
+            const dateStr = (task.status === "completed" || task.status === "lost") ? task.completedAt : task.dueDate;
+            if (!dateStr) return null;
+            return (
+              <span className="text-[9px] text-gray-500 font-medium">
+                {new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+              </span>
+            );
+          })()}
+        </div>
       </div>
 
       {/* Progress bar */}
       {task.progress > 0 && task.status !== "lost" && (
-        <div className="h-1 rounded-full bg-white/5 overflow-hidden mb-2">
+        <div className="h-1 rounded-full bg-white/5 overflow-hidden mt-1.5">
           <motion.div
             className="h-full rounded-full"
             style={{ background: progressColor }}
@@ -135,19 +164,6 @@ function TaskCard({
           />
         </div>
       )}
-
-      <div className="flex items-center justify-between">
-        <PriorityBadge priority={task.priority} />
-        {task.dueDate && (
-          <span className="text-[9px] text-gray-500 font-medium">
-            Due{" "}
-            {new Date(task.dueDate).toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-            })}
-          </span>
-        )}
-      </div>
     </motion.div>
   );
 }

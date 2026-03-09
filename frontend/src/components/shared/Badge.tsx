@@ -1,10 +1,10 @@
 import type { Priority, TaskStatus } from "../../types";
 
-const PRIORITY_STYLES: Record<Priority, string> = {
-  urgent: "bg-loss/20 text-loss border-loss/50",
-  high: "bg-accent-amber/20 text-accent-amber border-accent-amber/30",
-  medium: "bg-accent-blue/20 text-accent-blue border-accent-blue/30",
-  low: "bg-white/5 text-gray-400 border-white/10",
+const PRIORITY_DOT_COLOR: Record<Priority, string> = {
+  urgent: "#ff4466",
+  high: "#ffaa00",
+  medium: "#ffaa00",
+  low: "#3b82f6",
 };
 
 const STATUS_STYLES: Record<TaskStatus, { bg: string; dot: string }> = {
@@ -16,11 +16,17 @@ const STATUS_STYLES: Record<TaskStatus, { bg: string; dot: string }> = {
 };
 
 export function PriorityBadge({ priority }: { priority: Priority }) {
+  const color = PRIORITY_DOT_COLOR[priority];
   return (
-    <span
-      className={`inline-flex items-center px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded-full border ${PRIORITY_STYLES[priority]}`}
-    >
-      {priority}
+    <span className="relative inline-flex h-2.5 w-2.5">
+      <span
+        className="absolute inset-0 rounded-full opacity-60 animate-ping"
+        style={{ backgroundColor: color }}
+      />
+      <span
+        className="relative inline-flex h-2.5 w-2.5 rounded-full"
+        style={{ backgroundColor: color }}
+      />
     </span>
   );
 }
